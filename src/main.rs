@@ -1,37 +1,32 @@
 
-use std::env;
-use std::fs;
-use std::process;
+use std::{fs, process, env, path::PathBuf};
 
-fn count(path: &str) -> Result<(usize, usize), std::io::Error> {
-    let contents = fs::read_to_string(path)?;
-    let lines = contents.lines().count();
-    let words = contents.split_whitespace().count();
-    Ok((lines, words))
+use clap::Parser;
+
+#[derive(Parser)]
+#[command(version)]
+struct Cli {
+    #[arg(required = true)]
+    files: Vec<PathBuf>,
+
+    #[arg(short, long)]
+    lines_only: bool,
 }
 
-fn main() {
-    // like argv in C: index 0 is the program name
-    let args: Vec<String> = env::args().collect(); 
+fn main() -> Result<(), Box<dyn std::error::Error>> {
 
-    // args.get(1) => Option<&String>: Some(&String) or None
-    let path = match args.get(1) {
-        Some(p) => p,
-        None => {
-            eprintln!("Usage: {} <path>", args[0]);
-            process::exit(2);
-        }
-    };
+    let cli = Cli::parse();
 
-    match count(path) {
-        Ok((lines, words)) => println!("{lines} lines, {words} words"),
-        Err(error) => {
-            eprintln!("Error reading {path}: {error}");
-            process::exit(1);
+    for path in &cli.files {
+        let text = fs::read_to_string(path)?;
+        let lines = text.lines().count();
+        
+        if cli.lines_only {
+            println!("{lines:>8} {}", path.display());
+        } else {
+            let words = text.split_whitespace().count();
+            println!("{lines:>8} {words:>8} {}", path.display());
         }
     }
-
-
-    // &str: borrowed string slice (similar std::string_view)
-
+    Ok(())
 }
