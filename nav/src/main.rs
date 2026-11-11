@@ -2,7 +2,7 @@ use std::{ env, fs, io };
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{ Path, PathBuf };
-use std::process::Command;
+use std::process::{ Command, Stdio };
 use ratatui::{
     crossterm:: {
         cursor::{ Hide, MoveTo, Show },
@@ -10,20 +10,26 @@ use ratatui::{
         execute,
         terminal::{ Clear, ClearType, disable_raw_mode, enable_raw_mode },
     },
-    layout::Rect,
+    layout::{ Constraint, Layout, Rect },
     style::{ Modifier, Style },
-    widgets::{ Block, List, ListItem, ListState },
+    text::Line,
+    widgets::{ Block, List, ListItem, ListState, Paragraph },
     DefaultTerminal,
     Frame,
     TerminalOptions,
     Viewport,
 };
 
-const PANE_HEIGHT: u16 = 8;
+const PANE_HEIGHT: u16 = 16;
 const PAGE_STEP: usize = PANE_HEIGHT as usize - 2; // visible rows inside the border
 const DIR_ICON: &str = "📁";
 const FILE_ICON: &str = "📄";
 const EXE_ELF_ICON: &str = "➤";
+const HINTS: &[&str] = &[
+    "(q) quit", "(j) ↓", "(k) ↑", "{/} page", "(c) cd", "(.) ..", 
+    "(a) hidden", "(d) cmd",  "(m) mkdir", "(t) touch", "(o) open", "(r) rename", "(g) grep", "(e) move",
+    // (p) clip, (p) for path , (f) for file
+];
 
 struct FileEntry {
     name: String,
@@ -34,6 +40,9 @@ struct Browser {
     cwd: PathBuf,
     entries: Vec<FileEntry>,
     selected: usize,
+    show_hidden: bool,
+    pending_move: Option<PathBuf>,
+    status: Option<String>,
 }
 
 impl Browser {
@@ -49,26 +58,51 @@ impl Browser {
         self.selected = (self.selected as isize + delta).clamp(0, max) as usize;
     }
 
-    fn go_up(&mut self) -> io::Result<()> {
-        if let Some(parent) = self.cwd.parent().map(Path::to_path_buf) {
-            self.cwd = parent;
-            self.entries = list_entries(&self.cwd)?;
-            self.selected = 0;
+    /// Lists `target` before committing to it, so a permission-denied or since-deleted
+    /// directory shows an inline error instead of propagating and killing the whole program.
+    fn navigate_to(&mut self, target: PathBuf) {
+        match list_entries(&target, self.show_hidden) {
+            Ok(entries) => {
+                self.cwd = target;
+                self.entries = entries;
+                self.selected = 0;
+                self.status = None;
+            }
+            Err(err) => self.status = Some(format!("cannot open {}: {err}", target.display())),
         }
-        Ok(())
     }
 
-    fn enter_dir(&mut self, name: &str) -> io::Result<()> {
-        self.cwd = self.cwd.join(name);
-        self.entries = list_entries(&self.cwd)?;
-        self.selected = 0;
-        Ok(())
+    fn go_up(&mut self) {
+        if let Some(parent) = self.cwd.parent().map(Path::to_path_buf) {
+            self.navigate_to(parent);
+        }
+    }
+
+    fn enter_dir(&mut self, name: &str) {
+        self.navigate_to(self.cwd.join(name));
+    }
+
+    fn toggle_hidden(&mut self) {
+        self.show_hidden = !self.show_hidden;
+        self.refresh();
+    }
+
+    fn refresh(&mut self) {
+        match list_entries(&self.cwd, self.show_hidden) {
+            Ok(entries) => {
+                self.entries = entries;
+                self.selected = self.selected.min(self.entries.len().saturating_sub(1));
+                self.status = None;
+            }
+            Err(err) => self.status = Some(format!("cannot read {}: {err}", self.cwd.display())),
+        }
     }
 }
 
-fn list_entries(path: &Path) -> io::Result<Vec<FileEntry>> {
+fn list_entries(path: &Path, show_hidden: bool) -> io::Result<Vec<FileEntry>> {
     let mut entries: Vec<FileEntry> = fs::read_dir(path)?
         .filter_map(|entry| entry.ok())
+        .filter(|entry| show_hidden || !entry.file_name().to_string_lossy().starts_with('.'))
         .map(|entry| FileEntry {
             name: entry.file_name().to_string_lossy().into_owned(),
             is_dir: entry.path().is_dir(),
@@ -85,10 +119,99 @@ fn is_executable(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+fn file_icon(name: &str) -> &'static str {
+    let ext = Path::new(name)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(str::to_lowercase);
+
+    match ext.as_deref() {
+        Some("png" | "jpg" | "jpeg" | "gif" | "bmp" | "webp" | "svg" | "ico") => "📷",
+        Some("mp3" | "wav" | "flac" | "ogg" | "m4a") => "🎵",
+        Some("mp4" | "mkv" | "mov" | "avi" | "webm") => "🎬",
+        Some("zip" | "tar" | "gz" | "bz2" | "xz" | "7z" | "rar") => "📦",
+        Some("ods" | "fods"| "gnm"| "csv"| "psv"| "tsv"| "xls"| "slxb"| "slxm" | "xlsx") => "📊",
+        Some("doc" | "docx" | "rtf" | "pdf" | "odt") => "🗎",
+        Some("json") => "{}",
+        Some("html" | "xml") => "</>",
+        Some("js") => "JS",
+        Some("ts") => "TS",
+        Some("nix") => "❄️",
+        Some("lua") => "◉°",
+        Some("go") => "Go",
+        Some("jsx" | "tsx") => "⚛️",
+        Some("py") => "🐍",
+        Some("rs") => "🦀",
+        Some("php") => "🐘",
+        Some("rb") => "♦️",
+        Some("java") => "♨️",
+        Some("cs") => "#",
+        Some("swift") => "🕊",
+        Some("sql") => "🐿️",
+        Some("md" | "markdown") => "📝",
+        Some("sqlite" | "sqlite3") => "🪶",
+        Some("zig" | "odin" | "css" | "c" | "h" | "r" | "cpp" | "hpp") => "📜",
+        Some("yaml" | "yml" | "toml" | "ini" | "conf" | "config" | "cfg" | "plist") => "🔧",
+        Some("iso" | "bin" | "cue" | "img"  | "rom" | "sfc" | "nes" | "gba" | "z64") => "💾",
+        Some("db" | ".bak" | "mdf" | "ndf" | "mdb" | "db3" | "dbf" | "odb" | "myc" | "myd" | "myi") => "📀",
+        Some("sh" | "bash" | "zsh" | "ksh") => ">_",
+        _ => FILE_ICON,
+    }
+}
+
+/// Packs hint segments onto lines of at most `width` columns, breaking only at `|` boundaries
+/// (never mid-segment) so the hint bar wraps instead of clipping on narrow terminals.
+fn wrap_hints(width: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    let mut current = String::new();
+
+    for hint in HINTS {
+        let candidate = if current.is_empty() {
+            hint.to_string()
+        } else {
+            format!("{current} | {hint}")
+        };
+
+        if candidate.chars().count() > width && !current.is_empty() {
+            lines.push(current);
+            current = hint.to_string();
+        } else {
+            current = candidate;
+        }
+    }
+
+    if !current.is_empty() {
+        lines.push(current);
+    }
+
+    lines
+}
+
 fn draw(frame: &mut Frame, browser: &Browser) {
-    let title = format!(" {} ", browser.cwd.display());
-    let hints = " ↑/↓ select, PgUp/PgDn page, Enter: run command, c: step into dir, . : up a dir, q: quit ";
-    let block = Block::bordered().title_top(title).title_bottom(hints);
+    let area = frame.area();
+    let hint_lines = wrap_hints(area.width as usize);
+    let [box_area, hints_area] = Layout::vertical([
+        Constraint::Min(1),
+        Constraint::Length(hint_lines.len() as u16),
+    ])
+    .areas(area);
+
+    let dir_name = browser.cwd.file_name().map_or_else(String::new, |name| name.to_string_lossy().into_owned());
+    let title = format!(" /{dir_name} ");
+    let status = if let Some(msg) = &browser.status {
+        format!(" {msg} ")
+    } else {
+        match &browser.pending_move {
+            Some(source) => format!(" moving: {} (Esc to cancel) ", source.display()),
+            None if browser.show_hidden => " all files ".to_string(),
+            None => " files hidden ".to_string(),
+        }
+    };
+    let block = Block::bordered()
+        .title_top(title)
+        .title_top(Line::from(status).right_aligned());
+    let list_area = block.inner(box_area);
+    frame.render_widget(block, box_area);
 
     let items: Vec<ListItem> = if browser.entries.is_empty() {
         vec![ListItem::new("(empty)")]
@@ -100,7 +223,7 @@ fn draw(frame: &mut Frame, browser: &Browser) {
                 } else if is_executable(&browser.cwd.join(&entry.name)) {
                     EXE_ELF_ICON
                 } else {
-                    FILE_ICON
+                    file_icon(&entry.name)
                 };
                 ListItem::new(format!("{icon} {}", entry.name))
             })
@@ -108,7 +231,6 @@ fn draw(frame: &mut Frame, browser: &Browser) {
     };
 
     let list = List::new(items)
-        .block(block)
         .highlight_style(Style::new().add_modifier(Modifier::REVERSED))
         .highlight_symbol("> ");
 
@@ -116,26 +238,58 @@ fn draw(frame: &mut Frame, browser: &Browser) {
     if !browser.entries.is_empty() {
         state.select(Some(browser.selected));
     }
-    frame.render_stateful_widget(list, frame.area(), &mut state);
+    frame.render_stateful_widget(list, list_area, &mut state);
+
+    let hint_text: Vec<Line> = hint_lines.into_iter().map(Line::from).collect();
+    frame.render_widget(Paragraph::new(hint_text), hints_area);
+}
+
+/// Clears the terminal's visible screen *and* scrollback history (`ClearType::Purge`, CSI
+/// `3J`), then re-anchors a fresh inline viewport at row 0. Call this whenever a resize is
+/// detected.
+///
+/// Shrinking a terminal below nav's rendered height pushes the old (too-tall) frame into
+/// scrollback before nav even receives the resize event — that part happens at the terminal
+/// emulator level and can't be prevented. But without purging, nav then draws a *new* frame on
+/// top, so every resize leaves one more duplicate sitting in scrollback history. Purging means
+/// there's nothing left to scroll back to — at the cost of also wiping any of the user's own
+/// shell history that predates nav, since purge clears the whole scrollback buffer, not just
+/// nav's own output.
+fn reset_terminal_on_resize(terminal: &mut DefaultTerminal) -> io::Result<()> {
+    execute!(io::stdout(), Clear(ClearType::All), Clear(ClearType::Purge), MoveTo(0, 0))?;
+    *terminal = ratatui::init_with_options(TerminalOptions {
+        viewport: Viewport::Inline(PANE_HEIGHT),
+    });
+    Ok(())
+}
+
+/// Marks the browser as awaiting input on `label` and forces an immediate redraw, so the
+/// title bar's "(Esc to cancel)" hint appears before the blocking prompt takes over input —
+/// mirroring how the pending-move hint already appears via the normal redraw cycle.
+fn show_cancelable_prompt(terminal: &mut DefaultTerminal, browser: &mut Browser, label: &str) -> io::Result<()> {
+    browser.status = Some(format!("{label} (Esc to cancel)"));
+    terminal.draw(|frame| draw(frame, browser))?;
+    Ok(())
 }
 
 fn run_command_on_entry(
     terminal: &mut DefaultTerminal,
-    viewport_area: Rect,
-    cwd: &Path,
+    browser: &Browser,
+    viewport_area: &mut Rect,
     name: &str,
 ) -> io::Result<()> {
-    disable_raw_mode()?;
-    execute!(io::stdout(), MoveTo(0, viewport_area.bottom()), Show)?;
-
-    print!("command on {name} (use {{}} for the path, otherwise it's appended): ");
-    io::stdout().flush()?;
-
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
+    let cwd: &Path = &browser.cwd;
+    let header = format!("command on {name} (use {{}} for the path, otherwise it's appended)");
+    let Some(input) = read_cancelable_line(terminal, browser, viewport_area, Some(&header), ": ")? else {
+        terminal.clear()?;
+        return Ok(());
+    };
     let input = input.trim();
 
     if !input.is_empty() {
+        disable_raw_mode()?;
+        execute!(io::stdout(), MoveTo(0, viewport_area.bottom() + 1), Show)?;
+
         let full_path = cwd.join(name);
         let command_str = if input.contains("{}") {
             input.replace("{}", &full_path.to_string_lossy())
@@ -143,12 +297,158 @@ fn run_command_on_entry(
             format!("{input} {}", full_path.display())
         };
 
-        match Command::new("sh").arg("-c").arg(&command_str).current_dir(cwd).status() {
-            Ok(status) if !status.success() => println!("(command exited with {status})"),
-            Err(err) => println!("(failed to run command: {err})"),
-            _ => {}
+        let failed = match Command::new("sh").arg("-c").arg(&command_str).current_dir(cwd).status() {
+            Ok(status) if !status.success() => {
+                println!("command failed: {command_str} ({status})");
+                true
+            }
+            Err(err) => {
+                println!("command failed: {command_str} ({err})");
+                true
+            }
+            _ => false,
+        };
+
+        if failed {
+            println!("press Enter to return to the list...");
+            let mut pause = String::new();
+            io::stdin().read_line(&mut pause)?;
         }
 
+        execute!(io::stdout(), Hide)?;
+        enable_raw_mode()?;
+    }
+
+    terminal.clear()?;
+    Ok(())
+}
+
+/// Reads a line of input without leaving raw mode, so Esc cancels immediately (returning
+/// `Ok(None)`) instead of just being inserted as a literal character like it would under the
+/// normal cooked-mode `read_line` prompts. Also watches for `Event::Resize`: unlike the main
+/// loop, this loop doesn't call `terminal.draw` every iteration, so without
+/// `reset_terminal_on_resize` a resize mid-prompt would leave the border drawn at the old size.
+///
+/// The prompt-line cursor move is routed through `terminal.set_cursor_position` rather than a
+/// raw crossterm `MoveTo`, so ratatui's internal "last known cursor position" bookkeeping
+/// stays truthful between resizes instead of drifting from under it.
+fn read_cancelable_line(
+    terminal: &mut DefaultTerminal,
+    browser: &Browser,
+    viewport_area: &mut Rect,
+    header: Option<&str>,
+    prompt: &str,
+) -> io::Result<Option<String>> {
+    execute!(io::stdout(), Show)?;
+    let mut input = String::new();
+
+    let result = loop {
+        // When there's a header, it takes the row right below the box and the input prompt
+        // moves down one row to follow it; otherwise the input prompt takes that row itself.
+        if let Some(header) = header {
+            terminal.set_cursor_position((0, viewport_area.bottom()))?;
+            execute!(io::stdout(), Clear(ClearType::CurrentLine))?;
+            print!("{header}");
+        }
+        let input_row = viewport_area.bottom() + u16::from(header.is_some());
+        terminal.set_cursor_position((0, input_row))?;
+        execute!(io::stdout(), Clear(ClearType::CurrentLine))?;
+        print!("{prompt}{input}");
+        io::stdout().flush()?;
+
+        match event::read()? {
+            Event::Key(key_event) => {
+                if key_event.kind != KeyEventKind::Press {
+                    continue;
+                }
+                match key_event.code {
+                    KeyCode::Esc => break Ok(None),
+                    KeyCode::Enter => break Ok(Some(input)),
+                    KeyCode::Backspace => {
+                        input.pop();
+                    }
+                    KeyCode::Char(c) => input.push(c),
+                    _ => {}
+                }
+            }
+            Event::Resize(_, _) => {
+                reset_terminal_on_resize(terminal)?;
+                terminal.draw(|frame| {
+                    *viewport_area = frame.area();
+                    draw(frame, browser);
+                })?;
+                execute!(io::stdout(), Show)?;
+            }
+            _ => {}
+        }
+    };
+
+    execute!(io::stdout(), Hide)?;
+    result
+}
+
+fn run_named_command(
+    terminal: &mut DefaultTerminal,
+    browser: &Browser,
+    viewport_area: &mut Rect,
+    program: &str,
+) -> io::Result<()> {
+    let cwd: &Path = &browser.cwd;
+    let prompt = format!("{program} in {}: ", cwd.display());
+    let Some(name) = read_cancelable_line(terminal, browser, viewport_area, None, &prompt)? else {
+        terminal.clear()?;
+        return Ok(());
+    };
+    let name = name.trim();
+
+    if !name.is_empty() {
+        disable_raw_mode()?;
+        execute!(io::stdout(), MoveTo(0, viewport_area.bottom()), Show)?;
+
+        let failed = match Command::new(program).arg(name).current_dir(cwd).status() {
+            Ok(status) if !status.success() => {
+                println!("{program} failed: {name} ({status})");
+                true
+            }
+            Err(err) => {
+                println!("{program} failed: {name} ({err})");
+                true
+            }
+            _ => false,
+        };
+
+        if failed {
+            println!("press Enter to return to the list...");
+            let mut pause = String::new();
+            io::stdin().read_line(&mut pause)?;
+        }
+
+        execute!(io::stdout(), Hide)?;
+        enable_raw_mode()?;
+    }
+
+    terminal.clear()?;
+    Ok(())
+}
+
+fn open_entry(terminal: &mut DefaultTerminal, viewport_area: Rect, cwd: &Path, name: &str) -> io::Result<()> {
+    disable_raw_mode()?;
+    execute!(io::stdout(), MoveTo(0, viewport_area.bottom()), Show)?;
+
+    let full_path = cwd.join(name);
+    let failed = match Command::new("xdg-open").arg(&full_path).status() {
+        Ok(status) if !status.success() => {
+            println!("xdg-open failed: {} ({status})", full_path.display());
+            true
+        }
+        Err(err) => {
+            println!("xdg-open failed: {} ({err})", full_path.display());
+            true
+        }
+        _ => false,
+    };
+
+    if failed {
         println!("press Enter to return to the list...");
         let mut pause = String::new();
         io::stdin().read_line(&mut pause)?;
@@ -156,6 +456,179 @@ fn run_command_on_entry(
 
     execute!(io::stdout(), Hide)?;
     enable_raw_mode()?;
+    terminal.clear()?;
+    Ok(())
+}
+
+fn rename_entry(
+    terminal: &mut DefaultTerminal,
+    browser: &Browser,
+    viewport_area: &mut Rect,
+    old_name: &str,
+) -> io::Result<()> {
+    let cwd: &Path = &browser.cwd;
+    let prompt = format!("rename {old_name} to: ");
+    let Some(new_name) = read_cancelable_line(terminal, browser, viewport_area, None, &prompt)? else {
+        terminal.clear()?;
+        return Ok(());
+    };
+    let new_name = new_name.trim();
+
+    if !new_name.is_empty() {
+        disable_raw_mode()?;
+        execute!(io::stdout(), MoveTo(0, viewport_area.bottom()), Show)?;
+
+        let failed = match Command::new("mv").arg(old_name).arg(new_name).current_dir(cwd).status() {
+            Ok(status) if !status.success() => {
+                println!("mv failed: {old_name} -> {new_name} ({status})");
+                true
+            }
+            Err(err) => {
+                println!("mv failed: {old_name} -> {new_name} ({err})");
+                true
+            }
+            _ => false,
+        };
+
+        if failed {
+            println!("press Enter to return to the list...");
+            let mut pause = String::new();
+            io::stdin().read_line(&mut pause)?;
+        }
+
+        execute!(io::stdout(), Hide)?;
+        enable_raw_mode()?;
+    }
+
+    terminal.clear()?;
+    Ok(())
+}
+
+fn move_entry(terminal: &mut DefaultTerminal, viewport_area: Rect, source: &Path, dest_dir: &Path) -> io::Result<()> {
+    disable_raw_mode()?;
+    execute!(io::stdout(), MoveTo(0, viewport_area.bottom()), Show)?;
+
+    let failed = match Command::new("mv").arg(source).arg(dest_dir).status() {
+        Ok(status) if !status.success() => {
+            println!("mv failed: {} -> {} ({status})", source.display(), dest_dir.display());
+            true
+        }
+        Err(err) => {
+            println!("mv failed: {} -> {} ({err})", source.display(), dest_dir.display());
+            true
+        }
+        _ => false,
+    };
+
+    if failed {
+        println!("press Enter to return to the list...");
+        let mut pause = String::new();
+        io::stdin().read_line(&mut pause)?;
+    }
+
+    execute!(io::stdout(), Hide)?;
+    enable_raw_mode()?;
+    terminal.clear()?;
+    Ok(())
+}
+
+const TERMINAL_CANDIDATES: &[&str] = &[
+    "x-terminal-emulator", "konsole", "gnome-terminal", "xfce4-terminal",
+    "alacritty", "kitty", "foot", "xterm",
+];
+
+/// Opens `command_str` in a terminal emulator, preferring `$TERMINAL` if set and otherwise
+/// trying common emulators in turn until one actually launches.
+fn spawn_in_terminal(cwd: &Path, command_str: &str) -> io::Result<()> {
+    let held = format!("{command_str}; echo; read -p 'press Enter to close...' _");
+
+    let mut candidates: Vec<String> = Vec::new();
+    if let Ok(term) = env::var("TERMINAL") {
+        candidates.push(term);
+    }
+    candidates.extend(TERMINAL_CANDIDATES.iter().map(|term| term.to_string()));
+
+    let mut last_err = io::Error::new(io::ErrorKind::NotFound, "no terminal emulator found");
+    for term in candidates {
+        match Command::new(&term)
+            .args(["-e", "sh", "-c", &held])
+            .current_dir(cwd)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+        {
+            Ok(_) => return Ok(()),
+            Err(err) => last_err = err,
+        }
+    }
+    Err(last_err)
+}
+
+fn grep_entry(
+    terminal: &mut DefaultTerminal,
+    browser: &Browser,
+    viewport_area: &mut Rect,
+    name: &str,
+) -> io::Result<()> {
+    let cwd: &Path = &browser.cwd;
+    let prompt = format!("grep [options] \"pattern\" on {name}: grep ");
+    let Some(input) = read_cancelable_line(terminal, browser, viewport_area, None, &prompt)? else {
+        terminal.clear()?;
+        return Ok(());
+    };
+    let input = input.trim();
+
+    if !input.is_empty() {
+        let full_path = cwd.join(name);
+
+        let out_prompt = "output file name (leave blank to open a new terminal instead): ";
+        let Some(out_name) = read_cancelable_line(terminal, browser, viewport_area, None, out_prompt)? else {
+            terminal.clear()?;
+            return Ok(());
+        };
+        let out_name = out_name.trim();
+
+        disable_raw_mode()?;
+        execute!(io::stdout(), MoveTo(0, viewport_area.bottom()), Show)?;
+
+        let failed = if out_name.is_empty() {
+            let command_str = format!("grep {input} {}", full_path.display());
+            // open in its own terminal window (held open until the user closes it) so the
+            // match output isn't wiped by nav's own redraw once we return to the list
+            match spawn_in_terminal(cwd, &command_str) {
+                Ok(()) => false,
+                Err(err) => {
+                    println!("failed to open terminal: {err}");
+                    true
+                }
+            }
+        } else {
+            let command_str = format!("grep {input} {} > {out_name}", full_path.display());
+            match Command::new("sh").arg("-c").arg(&command_str).current_dir(cwd).status() {
+                Ok(status) if !status.success() => {
+                    println!("command failed: {command_str} ({status})");
+                    true
+                }
+                Err(err) => {
+                    println!("command failed: {command_str} ({err})");
+                    true
+                }
+                _ => false,
+            }
+        };
+
+        if failed {
+            println!("press Enter to return to the list...");
+            let mut pause = String::new();
+            io::stdin().read_line(&mut pause)?;
+        }
+
+        // fully refresh nav's own pane rather than trusting its last remembered position
+        execute!(io::stdout(), Clear(ClearType::All), MoveTo(0, 0), Hide)?;
+        enable_raw_mode()?;
+    }
+
     terminal.clear()?;
     Ok(())
 }
@@ -168,29 +641,83 @@ fn run(terminal: &mut DefaultTerminal, browser: &mut Browser) -> io::Result<()> 
             draw(frame, browser);
         })?;
 
-        if let Event::Key(key_event) = event::read()? {
+        let event = event::read()?;
+        if let Event::Resize(_, _) = event {
+            reset_terminal_on_resize(terminal)?;
+            continue;
+        }
+
+        if let Event::Key(key_event) = event {
             if key_event.kind != KeyEventKind::Press {
                 continue;
             }
 
             match key_event.code {
-                KeyCode::Char('q') | KeyCode::Esc => return Ok(()),
+                KeyCode::Char('q') => return Ok(()),
+                KeyCode::Esc if browser.pending_move.take().is_none() => return Ok(()),
+                KeyCode::Esc => {}
                 KeyCode::Up | KeyCode::Char('k') => browser.move_selection(-1),
                 KeyCode::Down | KeyCode::Char('j') => browser.move_selection(1),
-                KeyCode::PageUp => browser.move_selection(-(PAGE_STEP as isize)),
-                KeyCode::PageDown => browser.move_selection(PAGE_STEP as isize),
-                KeyCode::Char('.') => browser.go_up()?,
+                KeyCode::PageUp | KeyCode::Char('{') => browser.move_selection(-(PAGE_STEP as isize)),
+                KeyCode::PageDown | KeyCode::Char('}') => browser.move_selection(PAGE_STEP as isize),
+                KeyCode::Char('.') => browser.go_up(),
+                KeyCode::Char('a') => browser.toggle_hidden(),
+                KeyCode::Char('m') => {
+                    show_cancelable_prompt(terminal, browser, "mkdir")?;
+                    run_named_command(terminal, browser, &mut viewport_area, "mkdir")?;
+                    browser.refresh();
+                }
+                KeyCode::Char('t') => {
+                    show_cancelable_prompt(terminal, browser, "touch")?;
+                    run_named_command(terminal, browser, &mut viewport_area, "touch")?;
+                    browser.refresh();
+                }
                 KeyCode::Char('c') => {
-                    if let Some(entry) = browser.selected_entry() {
-                        if entry.is_dir {
-                            let name = entry.name.clone();
-                            browser.enter_dir(&name)?;
-                        }
+                    if let Some(entry) = browser.selected_entry()
+                        && entry.is_dir
+                    {
+                        let name = entry.name.clone();
+                        browser.enter_dir(&name);
                     }
                 }
-                KeyCode::Enter => {
+                KeyCode::Char('o') => {
                     if let Some(name) = browser.selected_entry().map(|entry| entry.name.clone()) {
-                        run_command_on_entry(terminal, viewport_area, &browser.cwd, &name)?;
+                        open_entry(terminal, viewport_area, &browser.cwd, &name)?;
+                    }
+                }
+                KeyCode::Char('r') => {
+                    if let Some(name) = browser.selected_entry().map(|entry| entry.name.clone()) {
+                        show_cancelable_prompt(terminal, browser, "rename")?;
+                        rename_entry(terminal, browser, &mut viewport_area, &name)?;
+                        browser.refresh();
+                    }
+                }
+                KeyCode::Char('g') => {
+                    if let Some(name) = browser.selected_entry().map(|entry| entry.name.clone()) {
+                        show_cancelable_prompt(terminal, browser, "grep")?;
+                        grep_entry(terminal, browser, &mut viewport_area, &name)?;
+                        browser.refresh();
+                    }
+                }
+                KeyCode::Char('e') => {
+                    if let Some(source) = browser.pending_move.take() {
+                        match browser.selected_entry() {
+                            Some(entry) if entry.is_dir => {
+                                let dest = browser.cwd.join(&entry.name);
+                                move_entry(terminal, viewport_area, &source, &dest)?;
+                                browser.refresh();
+                            }
+                            _ => browser.pending_move = Some(source),
+                        }
+                    } else if let Some(entry) = browser.selected_entry() {
+                        browser.pending_move = Some(browser.cwd.join(&entry.name));
+                    }
+                }
+                KeyCode::Char('d') => {
+                    if let Some(name) = browser.selected_entry().map(|entry| entry.name.clone()) {
+                        show_cancelable_prompt(terminal, browser, "cmd")?;
+                        run_command_on_entry(terminal, browser, &mut viewport_area, &name)?;
+                        browser.refresh();
                     }
                 }
                 _ => {}
@@ -201,8 +728,12 @@ fn run(terminal: &mut DefaultTerminal, browser: &mut Browser) -> io::Result<()> 
 
 fn main() -> io::Result<()> {
     let cwd = env::current_dir()?;
-    let entries = list_entries(&cwd)?;
-    let mut browser = Browser { cwd, entries, selected: 0 };
+    let show_hidden = false;
+    let entries = list_entries(&cwd, show_hidden)?;
+    let mut browser = Browser { cwd, entries, selected: 0, show_hidden, pending_move: None, status: None };
+
+    // clear terminal before drawing so the pane starts on a clean screen
+    execute!(io::stdout(), Clear(ClearType::All), MoveTo(0, 0))?;
 
     // draw up to PANE_HEIGHT lines
     let mut terminal = ratatui::init_with_options(TerminalOptions {
