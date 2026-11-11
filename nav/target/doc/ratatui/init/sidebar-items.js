@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["init","init_with_options","restore","run","try_init","try_init_with_options","try_restore"],"type":["DefaultTerminal"]};

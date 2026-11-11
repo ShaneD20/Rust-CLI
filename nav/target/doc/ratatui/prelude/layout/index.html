@@ -1,0 +1,239 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Layout and positioning in terminal user interfaces."><title>ratatui::prelude::layout - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-b7b9f40b.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="ratatui" data-themes="" data-resource-suffix="" data-rustdoc-version="1.95.0 (59807616e 2026-04-14) (built from a source tarball)" data-channel="1.95.0" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="icon" href="https://raw.githubusercontent.com/ratatui/ratatui/main/assets/favicon.ico"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module layout</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><a class="logo-container" href="../../../ratatui/index.html"><img src="https://raw.githubusercontent.com/ratatui/ratatui/main/assets/logo.png" alt="logo"></a><h2><a href="../../../ratatui/index.html">ratatui</a><span class="version">0.30.2</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module layout</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#core-concepts" title="Core Concepts">Core Concepts</a><ul><li><a href="#coordinate-system" title="Coordinate System">Coordinate System</a></li><li><a href="#layout-fundamentals" title="Layout Fundamentals">Layout Fundamentals</a></li><li><a href="#rectangular-areas" title="Rectangular Areas">Rectangular Areas</a></li></ul></li><li><a href="#available-types" title="Available Types">Available Types</a><ul><li><a href="#core-layout-types" title="Core Layout Types">Core Layout Types</a></li><li><a href="#positioning-and-sizing" title="Positioning and Sizing">Positioning and Sizing</a></li><li><a href="#alignment" title="Alignment">Alignment</a></li><li><a href="#iteration-support" title="Iteration Support">Iteration Support</a></li></ul></li><li><a href="#quick-start" title="Quick Start">Quick Start</a></li><li><a href="#layout-examples" title="Layout Examples">Layout Examples</a><ul><li><a href="#basic-vertical-split" title="Basic Vertical Split">Basic Vertical Split</a></li><li><a href="#horizontal-sidebar-layout" title="Horizontal Sidebar Layout">Horizontal Sidebar Layout</a></li><li><a href="#complex-nested-layout" title="Complex Nested Layout">Complex Nested Layout</a></li></ul></li><li><a href="#working-with-constraints" title="Working with Constraints">Working with Constraints</a></li><li><a href="#flexible-space-distribution" title="Flexible Space Distribution">Flexible Space Distribution</a></li><li><a href="#positioning-and-alignment" title="Positioning and Alignment">Positioning and Alignment</a></li><li><a href="#advanced-features" title="Advanced Features">Advanced Features</a><ul><li><a href="#margins-and-spacing" title="Margins and Spacing">Margins and Spacing</a></li><li><a href="#area-iteration" title="Area Iteration">Area Iteration</a></li></ul></li><li><a href="#performance-considerations" title="Performance Considerations">Performance Considerations</a></li><li><a href="#related-documentation" title="Related Documentation">Related Documentation</a></li><li><a href="#examples" title="Examples">Examples</a></li></ul><h3><a href="#structs">Module Items</a></h3><ul class="block"><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#enums" title="Enums">Enums</a></li><li><a href="#types" title="Type Aliases">Type Aliases</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="../index.html">In ratatui::<wbr>prelude</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../index.html">ratatui</a>::<wbr><a href="../index.html">prelude</a></div><h1>Module <span>layout</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"></span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Layout and positioning in terminal user interfaces.</p>
+<p>This module provides a comprehensive set of types and traits for working with layout and
+positioning in terminal applications. It implements a flexible layout system that allows you to
+divide the terminal screen into different areas using constraints, manage positioning and
+sizing, and handle complex UI arrangements.</p>
+<p>The layout system in Ratatui is based on the Cassowary constraint solver algorithm, implemented
+through the <a href="https://crates.io/crates/kasuari"><code>kasuari</code></a> crate. This allows for sophisticated constraint-based layouts where
+multiple requirements can be satisfied simultaneously, with priorities determining which
+constraints take precedence when conflicts arise.</p>
+<h2 id="core-concepts"><a class="doc-anchor" href="#core-concepts">§</a>Core Concepts</h2><h3 id="coordinate-system"><a class="doc-anchor" href="#coordinate-system">§</a>Coordinate System</h3>
+<p>The coordinate system runs left to right, top to bottom, with the origin <code>(0, 0)</code> in the top
+left corner of the terminal. The x and y coordinates are represented by <code>u16</code> values.</p>
+<div class="example-wrap"><pre class="language-text"><code>     x (columns)
+  ┌─────────────→
+y │ (0,0)
+  │
+(rows)
+  ↓</code></pre></div><h3 id="layout-fundamentals"><a class="doc-anchor" href="#layout-fundamentals">§</a>Layout Fundamentals</h3>
+<p>Layouts form the structural foundation of your terminal UI. The <a href="../struct.Layout.html" title="struct ratatui::prelude::Layout"><code>Layout</code></a> struct divides
+available screen space into rectangular areas using a constraint-based approach. You define
+multiple constraints for how space should be allocated, and the Cassowary solver determines
+the optimal layout that satisfies as many constraints as possible. These areas can then be
+used to render widgets or nested layouts.</p>
+<p>Note that the <a href="../struct.Layout.html" title="struct ratatui::prelude::Layout"><code>Layout</code></a> struct is not required to create layouts - you can also manually
+calculate and create <a href="../struct.Rect.html" title="struct ratatui::prelude::Rect"><code>Rect</code></a> areas using simple mathematics to divide up the terminal space
+if you prefer direct control over positioning and sizing.</p>
+<h3 id="rectangular-areas"><a class="doc-anchor" href="#rectangular-areas">§</a>Rectangular Areas</h3>
+<p>All layout operations work with rectangular areas represented by the <a href="../struct.Rect.html" title="struct ratatui::prelude::Rect"><code>Rect</code></a> type. A <a href="../struct.Rect.html" title="struct ratatui::prelude::Rect"><code>Rect</code></a>
+defines a position and size in the terminal, specified by its top-left corner coordinates and
+dimensions.</p>
+<h2 id="available-types"><a class="doc-anchor" href="#available-types">§</a>Available Types</h2><h3 id="core-layout-types"><a class="doc-anchor" href="#core-layout-types">§</a>Core Layout Types</h3>
+<ul>
+<li><a href="../struct.Layout.html" title="struct ratatui::prelude::Layout"><code>Layout</code></a> - The primary layout engine that divides space using constraints and direction</li>
+<li><a href="../struct.Rect.html" title="struct ratatui::prelude::Rect"><code>Rect</code></a> - Represents a rectangular area with position and dimensions</li>
+<li><a href="../enum.Constraint.html" title="enum ratatui::prelude::Constraint"><code>Constraint</code></a> - Defines how space should be allocated (length, percentage, ratio, etc.)</li>
+<li><a href="../enum.Direction.html" title="enum ratatui::prelude::Direction"><code>Direction</code></a> - Specifies layout orientation (horizontal or vertical)</li>
+<li><a href="../../layout/enum.Flex.html" title="enum ratatui::layout::Flex"><code>Flex</code></a> - Controls space distribution when constraints are satisfied</li>
+</ul>
+<h3 id="positioning-and-sizing"><a class="doc-anchor" href="#positioning-and-sizing">§</a>Positioning and Sizing</h3>
+<ul>
+<li><a href="../struct.Position.html" title="struct ratatui::prelude::Position"><code>Position</code></a> - Represents a point in the terminal coordinate system</li>
+<li><a href="../struct.Size.html" title="struct ratatui::prelude::Size"><code>Size</code></a> - Represents dimensions (width and height)</li>
+<li><a href="../struct.Margin.html" title="struct ratatui::prelude::Margin"><code>Margin</code></a> - Defines spacing around rectangular areas</li>
+<li><a href="../../layout/struct.Offset.html" title="struct ratatui::layout::Offset"><code>Offset</code></a> - Represents relative movement in the coordinate system</li>
+<li><a href="../../layout/enum.Spacing.html" title="enum ratatui::layout::Spacing"><code>Spacing</code></a> - Controls spacing or overlap between layout segments</li>
+</ul>
+<h3 id="alignment"><a class="doc-anchor" href="#alignment">§</a>Alignment</h3>
+<ul>
+<li><a href="../type.Alignment.html" title="type ratatui::prelude::Alignment"><code>Alignment</code></a> (alias for <a href="../enum.HorizontalAlignment.html" title="enum ratatui::prelude::HorizontalAlignment"><code>HorizontalAlignment</code></a>) - Horizontal text/content alignment</li>
+<li><a href="../enum.HorizontalAlignment.html" title="enum ratatui::prelude::HorizontalAlignment"><code>HorizontalAlignment</code></a> - Horizontal alignment options (left, center, right)</li>
+<li><a href="../enum.VerticalAlignment.html" title="enum ratatui::prelude::VerticalAlignment"><code>VerticalAlignment</code></a> - Vertical alignment options (top, center, bottom)</li>
+</ul>
+<h3 id="iteration-support"><a class="doc-anchor" href="#iteration-support">§</a>Iteration Support</h3>
+<ul>
+<li><a href="../../layout/struct.Rows.html" title="struct ratatui::layout::Rows"><code>Rows</code></a> - Iterator over horizontal rows within a rectangular area</li>
+<li><a href="../../layout/struct.Columns.html" title="struct ratatui::layout::Columns"><code>Columns</code></a> - Iterator over vertical columns within a rectangular area</li>
+<li><a href="../../layout/struct.Positions.html" title="struct ratatui::layout::Positions"><code>Positions</code></a> - Iterator over all positions within a rectangular area</li>
+</ul>
+<h2 id="quick-start"><a class="doc-anchor" href="#quick-start">§</a>Quick Start</h2>
+<p>Here’s a simple example of creating a basic layout using the <a href="../struct.Layout.html" title="struct ratatui::prelude::Layout"><code>Layout</code></a> struct:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>ratatui_core::layout::{Constraint, Direction, Layout, Rect};
+
+<span class="comment">// Create a terminal area
+</span><span class="kw">let </span>area = Rect::new(<span class="number">0</span>, <span class="number">0</span>, <span class="number">80</span>, <span class="number">24</span>);
+
+<span class="comment">// Divide it vertically into two equal parts using Layout
+</span><span class="kw">let </span>layout = Layout::vertical([Constraint::Percentage(<span class="number">50</span>), Constraint::Percentage(<span class="number">50</span>)]);
+<span class="kw">let </span>[top, bottom] = layout.areas(area);
+
+<span class="comment">// Now you have two areas: top and bottom</span></code></pre></div>
+<p><strong>Note</strong>: When the number of layout areas is known at compile time, use destructuring
+assignment with descriptive variable names for better readability:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>ratatui_core::layout::{Constraint, Layout, Rect};
+
+<span class="kw">let </span>area = Rect::new(<span class="number">0</span>, <span class="number">0</span>, <span class="number">80</span>, <span class="number">24</span>);
+<span class="kw">let </span>[header, content, footer] = Layout::vertical([
+    Constraint::Length(<span class="number">3</span>),
+    Constraint::Fill(<span class="number">1</span>),
+    Constraint::Length(<span class="number">1</span>),
+])
+.areas(area);</code></pre></div>
+<p>Use <a href="../struct.Layout.html#method.split" title="method ratatui::prelude::Layout::split"><code>Layout::split</code></a> when the number of areas is only known at runtime.</p>
+<p>Alternatively, you can create layouts manually using mathematics:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>ratatui_core::layout::Rect;
+
+<span class="comment">// Create a terminal area
+</span><span class="kw">let </span>area = Rect::new(<span class="number">0</span>, <span class="number">0</span>, <span class="number">80</span>, <span class="number">24</span>);
+
+<span class="comment">// Manually divide into two equal parts
+</span><span class="kw">let </span>top_half = Rect::new(area.x, area.y, area.width, area.height / <span class="number">2</span>);
+<span class="kw">let </span>bottom_half = Rect::new(
+    area.x,
+    area.y + area.height / <span class="number">2</span>,
+    area.width,
+    area.height / <span class="number">2</span>,
+);</code></pre></div><h2 id="layout-examples"><a class="doc-anchor" href="#layout-examples">§</a>Layout Examples</h2><h3 id="basic-vertical-split"><a class="doc-anchor" href="#basic-vertical-split">§</a>Basic Vertical Split</h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>ratatui_core::layout::{Constraint, Layout, Rect};
+
+<span class="kw">let </span>area = Rect::new(<span class="number">0</span>, <span class="number">0</span>, <span class="number">80</span>, <span class="number">24</span>);
+<span class="kw">let </span>[header, content, footer] = Layout::vertical([
+    Constraint::Length(<span class="number">3</span>), <span class="comment">// Header: fixed height
+    </span>Constraint::Fill(<span class="number">1</span>),   <span class="comment">// Content: flexible
+    </span>Constraint::Length(<span class="number">1</span>), <span class="comment">// Footer: fixed height
+</span>])
+.areas(area);</code></pre></div><h3 id="horizontal-sidebar-layout"><a class="doc-anchor" href="#horizontal-sidebar-layout">§</a>Horizontal Sidebar Layout</h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>ratatui_core::layout::{Constraint, Layout, Rect};
+
+<span class="kw">let </span>area = Rect::new(<span class="number">0</span>, <span class="number">0</span>, <span class="number">80</span>, <span class="number">24</span>);
+<span class="kw">let </span>[sidebar, main] = Layout::horizontal([
+    Constraint::Length(<span class="number">20</span>), <span class="comment">// Sidebar: fixed width
+    </span>Constraint::Fill(<span class="number">1</span>),    <span class="comment">// Main content: flexible
+</span>])
+.areas(area);</code></pre></div><h3 id="complex-nested-layout"><a class="doc-anchor" href="#complex-nested-layout">§</a>Complex Nested Layout</h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>ratatui_core::layout::{Constraint, Layout, Rect};
+
+<span class="kw">fn </span>create_complex_layout(area: Rect) -&gt; [Rect; <span class="number">4</span>] {
+    <span class="comment">// First, split vertically
+    </span><span class="kw">let </span>[header, body, footer] = Layout::vertical([
+        Constraint::Length(<span class="number">3</span>), <span class="comment">// Header
+        </span>Constraint::Fill(<span class="number">1</span>),   <span class="comment">// Body
+        </span>Constraint::Length(<span class="number">1</span>), <span class="comment">// Footer
+    </span>])
+    .areas(area);
+
+    <span class="comment">// Then split the body horizontally
+    </span><span class="kw">let </span>[sidebar, main] = Layout::horizontal([
+        Constraint::Length(<span class="number">20</span>), <span class="comment">// Sidebar
+        </span>Constraint::Fill(<span class="number">1</span>),    <span class="comment">// Main
+    </span>])
+    .areas(body);
+
+    [header, sidebar, main, footer]
+}</code></pre></div><h2 id="working-with-constraints"><a class="doc-anchor" href="#working-with-constraints">§</a>Working with Constraints</h2>
+<p><a href="../enum.Constraint.html" title="enum ratatui::prelude::Constraint"><code>Constraint</code></a>s define how space is allocated within a layout using the Cassowary constraint
+solver algorithm. The constraint solver attempts to satisfy all constraints simultaneously,
+with priorities determining which constraints take precedence when conflicts arise. Different
+constraint types serve different purposes:</p>
+<ul>
+<li><a href="../enum.Constraint.html#variant.Min" title="variant ratatui::prelude::Constraint::Min"><code>Constraint::Min</code></a> - Minimum size constraint</li>
+<li><a href="../enum.Constraint.html#variant.Max" title="variant ratatui::prelude::Constraint::Max"><code>Constraint::Max</code></a> - Maximum size constraint</li>
+<li><a href="../enum.Constraint.html#variant.Length" title="variant ratatui::prelude::Constraint::Length"><code>Constraint::Length</code></a> - Fixed size in character cells</li>
+<li><a href="../enum.Constraint.html#variant.Percentage" title="variant ratatui::prelude::Constraint::Percentage"><code>Constraint::Percentage</code></a> - Relative size as a percentage of available space</li>
+<li><a href="../enum.Constraint.html#variant.Ratio" title="variant ratatui::prelude::Constraint::Ratio"><code>Constraint::Ratio</code></a> - Proportional size using ratios</li>
+<li><a href="../enum.Constraint.html#variant.Fill" title="variant ratatui::prelude::Constraint::Fill"><code>Constraint::Fill</code></a> - Proportional fill of remaining space</li>
+</ul>
+<p>Constraints are resolved in priority order, with <a href="../enum.Constraint.html#variant.Min" title="variant ratatui::prelude::Constraint::Min"><code>Constraint::Min</code></a> having the highest
+priority and <a href="../enum.Constraint.html#variant.Fill" title="variant ratatui::prelude::Constraint::Fill"><code>Constraint::Fill</code></a> having the lowest. The constraint solver will satisfy as
+many constraints as possible while respecting these priorities.</p>
+<h2 id="flexible-space-distribution"><a class="doc-anchor" href="#flexible-space-distribution">§</a>Flexible Space Distribution</h2>
+<p>The <a href="../../layout/enum.Flex.html" title="enum ratatui::layout::Flex"><code>Flex</code></a> enum controls how extra space is distributed when constraints are satisfied:</p>
+<ul>
+<li><a href="../../layout/enum.Flex.html#variant.Start" title="variant ratatui::layout::Flex::Start"><code>Flex::Start</code></a> - Align content to the start, leaving excess space at the end</li>
+<li><a href="../../layout/enum.Flex.html#variant.End" title="variant ratatui::layout::Flex::End"><code>Flex::End</code></a> - Align content to the end, leaving excess space at the start</li>
+<li><a href="../../layout/enum.Flex.html#variant.Center" title="variant ratatui::layout::Flex::Center"><code>Flex::Center</code></a> - Center content, distributing excess space equally on both sides</li>
+<li><a href="../../layout/enum.Flex.html#variant.SpaceBetween" title="variant ratatui::layout::Flex::SpaceBetween"><code>Flex::SpaceBetween</code></a> - Distribute excess space evenly <em>between</em> elements, none at the ends</li>
+<li><a href="../../layout/enum.Flex.html#variant.SpaceAround" title="variant ratatui::layout::Flex::SpaceAround"><code>Flex::SpaceAround</code></a> - Distribute space <em>around</em> elements: equal padding on both sides of
+each element; gaps between elements are twice the edge spacing</li>
+<li><a href="../../layout/enum.Flex.html#variant.SpaceEvenly" title="variant ratatui::layout::Flex::SpaceEvenly"><code>Flex::SpaceEvenly</code></a> - Distribute space <em>evenly</em>: equal spacing between all elements,
+including before the first and after the last.</li>
+<li><a href="../../layout/enum.Flex.html#variant.Legacy" title="variant ratatui::layout::Flex::Legacy"><code>Flex::Legacy</code></a> - Legacy behavior (puts excess space in the last element)</li>
+</ul>
+<h2 id="positioning-and-alignment"><a class="doc-anchor" href="#positioning-and-alignment">§</a>Positioning and Alignment</h2>
+<p>Use <a href="../struct.Position.html" title="struct ratatui::prelude::Position"><code>Position</code></a> to represent specific points in the terminal, <a href="../struct.Size.html" title="struct ratatui::prelude::Size"><code>Size</code></a> for dimensions, and the
+alignment types for controlling content positioning within areas:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>ratatui_core::layout::{Alignment, Position, Rect, Size};
+
+<span class="kw">let </span>pos = Position::new(<span class="number">10</span>, <span class="number">5</span>);
+<span class="kw">let </span>size = Size::new(<span class="number">80</span>, <span class="number">24</span>);
+<span class="kw">let </span>rect = Rect::new(pos.x, pos.y, size.width, size.height);
+
+<span class="comment">// Alignment for content within areas
+</span><span class="kw">let </span>center = Alignment::Center;</code></pre></div><h2 id="advanced-features"><a class="doc-anchor" href="#advanced-features">§</a>Advanced Features</h2><h3 id="margins-and-spacing"><a class="doc-anchor" href="#margins-and-spacing">§</a>Margins and Spacing</h3>
+<p>Add spacing around areas using uniform margins or between layout segments using <a href="../../layout/enum.Spacing.html" title="enum ratatui::layout::Spacing"><code>Spacing</code></a>:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>ratatui_core::layout::{Constraint, Layout, Margin, Rect, Spacing};
+
+<span class="kw">let </span>layout = Layout::vertical([Constraint::Fill(<span class="number">1</span>), Constraint::Fill(<span class="number">1</span>)])
+    .margin(<span class="number">2</span>) <span class="comment">// 2-cell margin on all sides
+    </span>.spacing(Spacing::Space(<span class="number">1</span>)); <span class="comment">// 1-cell spacing between segments
+
+// For asymmetric margins, use the Rect inner method directly
+</span><span class="kw">let </span>area = Rect::new(<span class="number">0</span>, <span class="number">0</span>, <span class="number">80</span>, <span class="number">24</span>).inner(Margin::new(<span class="number">2</span>, <span class="number">1</span>));</code></pre></div><h3 id="area-iteration"><a class="doc-anchor" href="#area-iteration">§</a>Area Iteration</h3>
+<p>Iterate over rows, columns, or all positions within a rectangular area. The <code>rows()</code> and
+<code>columns()</code> iterators return full <a href="../struct.Rect.html" title="struct ratatui::prelude::Rect"><code>Rect</code></a> regions that can be used to render widgets or
+passed to other layout methods for more complex nested layouts. The <code>positions()</code> iterator
+returns <a href="../struct.Position.html" title="struct ratatui::prelude::Position"><code>Position</code></a> values representing individual cell coordinates:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>ratatui_core::buffer::Buffer;
+<span class="kw">use </span>ratatui_core::layout::{Constraint, Layout, Rect};
+<span class="kw">use </span>ratatui_core::widgets::Widget;
+
+<span class="kw">let </span>area = Rect::new(<span class="number">0</span>, <span class="number">0</span>, <span class="number">20</span>, <span class="number">10</span>);
+<span class="kw">let </span><span class="kw-2">mut </span>buffer = Buffer::empty(area);
+
+<span class="comment">// Renders "Row 0", "Row 1", etc. in each horizontal row
+</span><span class="kw">for </span>(i, row) <span class="kw">in </span>area.rows().enumerate() {
+    <span class="macro">format!</span>(<span class="string">"Row {i}"</span>).render(row, <span class="kw-2">&amp;mut </span>buffer);
+}
+
+<span class="comment">// Renders column indices (0-9 repeating) in each vertical column
+</span><span class="kw">for </span>(i, col) <span class="kw">in </span>area.columns().enumerate() {
+    <span class="macro">format!</span>(<span class="string">"{}"</span>, i % <span class="number">10</span>).render(col, <span class="kw-2">&amp;mut </span>buffer);
+}
+
+<span class="comment">// Renders position indices (0-9 repeating) at each cell position
+</span><span class="kw">for </span>(i, pos) <span class="kw">in </span>area.positions().enumerate() {
+    buffer[pos].set_symbol(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}"</span>, i % <span class="number">10</span>));
+}</code></pre></div><h2 id="performance-considerations"><a class="doc-anchor" href="#performance-considerations">§</a>Performance Considerations</h2>
+<p>The layout system includes optional caching to improve performance for repeated layout
+calculations. Layout caching is enabled by default in the main <code>ratatui</code> crate, but requires
+explicitly enabling the <code>layout-cache</code> feature when using <code>ratatui-core</code> directly. When
+enabled, layout results are cached based on the area and layout configuration.</p>
+<h2 id="related-documentation"><a class="doc-anchor" href="#related-documentation">§</a>Related Documentation</h2>
+<p>For more detailed information and practical examples:</p>
+<ul>
+<li><a href="https://ratatui.rs/concepts/layout/">Layout Concepts</a> - Comprehensive guide to layout
+concepts</li>
+<li><a href="https://ratatui.rs/recipes/layout/">Layout Recipes</a> - Practical layout examples and patterns</li>
+<li><a href="https://ratatui.rs/recipes/layout/grid/">Grid Layout Recipe</a> - Creating grid-based layouts</li>
+<li><a href="https://ratatui.rs/recipes/layout/center-a-widget/">Center a Widget Recipe</a> - Centering
+content</li>
+<li><a href="https://ratatui.rs/recipes/layout/dynamic/">Dynamic Layouts Recipe</a> - Creating responsive
+layouts</li>
+</ul>
+<h2 id="examples"><a class="doc-anchor" href="#examples">§</a>Examples</h2>
+<p>See the Ratatui repository for complete examples:</p>
+<ul>
+<li><a href="https://github.com/ratatui/ratatui/blob/main/examples/apps/constraints/"><code>constraints</code></a> -
+Demonstrates different constraint types</li>
+<li><a href="https://github.com/ratatui/ratatui/blob/main/examples/apps/flex/"><code>flex</code></a> - Shows flex space
+distribution</li>
+<li><a href="https://github.com/ratatui/ratatui/blob/main/examples/apps/layout/"><code>layout</code></a> - Basic layout
+examples</li>
+</ul>
+</div></details><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.Columns.html" title="struct ratatui::prelude::layout::Columns">Columns</a></dt><dd>An iterator over columns within a <code>Rect</code>.</dd><dt><a class="struct" href="struct.Layout.html" title="struct ratatui::prelude::layout::Layout">Layout</a></dt><dd>The primary layout engine for dividing terminal space using constraints and direction.</dd><dt><a class="struct" href="struct.Margin.html" title="struct ratatui::prelude::layout::Margin">Margin</a></dt><dd>Represents spacing around rectangular areas.</dd><dt><a class="struct" href="struct.Offset.html" title="struct ratatui::prelude::layout::Offset">Offset</a></dt><dd>Amounts by which to move a <a href="../struct.Rect.html" title="struct ratatui::prelude::Rect"><code>Rect</code></a>.</dd><dt><a class="struct" href="struct.Position.html" title="struct ratatui::prelude::layout::Position">Position</a></dt><dd>Position in the terminal coordinate system.</dd><dt><a class="struct" href="struct.Positions.html" title="struct ratatui::prelude::layout::Positions">Positions</a></dt><dd>An iterator over positions within a <code>Rect</code>.</dd><dt><a class="struct" href="struct.Rect.html" title="struct ratatui::prelude::layout::Rect">Rect</a></dt><dd>A rectangular area in the terminal.</dd><dt><a class="struct" href="struct.Rows.html" title="struct ratatui::prelude::layout::Rows">Rows</a></dt><dd>An iterator over rows within a <code>Rect</code>.</dd><dt><a class="struct" href="struct.Size.html" title="struct ratatui::prelude::layout::Size">Size</a></dt><dd>A simple size struct for representing dimensions in the terminal.</dd></dl><h2 id="enums" class="section-header">Enums<a href="#enums" class="anchor">§</a></h2><dl class="item-table"><dt><a class="enum" href="enum.Constraint.html" title="enum ratatui::prelude::layout::Constraint">Constraint</a></dt><dd>A constraint that defines the size of a layout element.</dd><dt><a class="enum" href="enum.Direction.html" title="enum ratatui::prelude::layout::Direction">Direction</a></dt><dd>Defines the direction of a layout.</dd><dt><a class="enum" href="enum.Flex.html" title="enum ratatui::prelude::layout::Flex">Flex</a></dt><dd>Defines the options for layout flex justify content in a container.</dd><dt><a class="enum" href="enum.HorizontalAlignment.html" title="enum ratatui::prelude::layout::HorizontalAlignment">Horizontal<wbr>Alignment</a></dt><dd>Horizontal content alignment within a layout area.</dd><dt><a class="enum" href="enum.Spacing.html" title="enum ratatui::prelude::layout::Spacing">Spacing</a></dt><dd>Represents the spacing between segments in a layout.</dd><dt><a class="enum" href="enum.VerticalAlignment.html" title="enum ratatui::prelude::layout::VerticalAlignment">Vertical<wbr>Alignment</a></dt><dd>Vertical content alignment within a layout area.</dd></dl><h2 id="types" class="section-header">Type Aliases<a href="#types" class="anchor">§</a></h2><dl class="item-table"><dt><a class="type" href="type.Alignment.html" title="type ratatui::prelude::layout::Alignment">Alignment</a></dt><dd>A type alias for <code>HorizontalAlignment</code>.</dd></dl></section></div></main></body></html>

@@ -1,0 +1,494 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Widgets are the building blocks of user interfaces in Ratatui."><title>ratatui::widgets - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-b7b9f40b.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="ratatui" data-themes="" data-resource-suffix="" data-rustdoc-version="1.95.0 (59807616e 2026-04-14) (built from a source tarball)" data-channel="1.95.0" data-search-js="search-63369b7b.js" data-stringdex-js="stringdex-b897f86f.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-5013f961.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="icon" href="https://raw.githubusercontent.com/ratatui/ratatui/main/assets/favicon.ico"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module widgets</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><a class="logo-container" href="../../ratatui/index.html"><img src="https://raw.githubusercontent.com/ratatui/ratatui/main/assets/logo.png" alt="logo"></a><h2><a href="../../ratatui/index.html">ratatui</a><span class="version">0.30.2</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module widgets</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#crate-organization" title="Crate Organization">Crate Organization</a></li><li><a href="#built-in-widgets" title="Built-in Widgets">Built-in Widgets</a></li><li><a href="#third-party-widgets" title="Third-Party Widgets">Third-Party Widgets</a></li><li><a href="#widget-traits" title="Widget Traits">Widget Traits</a><ul><li><a href="#widget" title="`Widget`"><code>Widget</code></a></li><li><a href="#statefulwidget" title="`StatefulWidget`"><code>StatefulWidget</code></a></li><li><a href="#widgetref-and-statefulwidgetref" title="`WidgetRef` and `StatefulWidgetRef`"><code>WidgetRef</code> and <code>StatefulWidgetRef</code></a></li></ul></li><li><a href="#rendering-widgets" title="Rendering Widgets">Rendering Widgets</a><ul><li><a href="#rendering-consuming-widgets" title="Rendering Consuming Widgets">Rendering Consuming Widgets</a></li><li><a href="#rendering-widget-references" title="Rendering Widget References">Rendering Widget References</a></li><li><a href="#rendering-stateful-widgets" title="Rendering Stateful Widgets">Rendering Stateful Widgets</a></li><li><a href="#single-root-widget-pattern" title="Single Root Widget Pattern">Single Root Widget Pattern</a></li></ul></li><li><a href="#authoring-custom-widgets" title="Authoring Custom Widgets">Authoring Custom Widgets</a><ul><li><a href="#state-management-patterns" title="State Management Patterns">State Management Patterns</a></li><li><a href="#shared-references-widget" title="Shared References (`&#38;Widget`)">Shared References (<code>&amp;Widget</code>)</a></li><li><a href="#mutable-references-mut-widget" title="Mutable References (`&#38;mut Widget`)">Mutable References (<code>&amp;mut Widget</code>)</a></li><li><a href="#consuming-widget-implementation" title="Consuming Widget Implementation">Consuming Widget Implementation</a></li><li><a href="#statefulwidget-implementation" title="`StatefulWidget` Implementation"><code>StatefulWidget</code> Implementation</a></li><li><a href="#manual-widgetref-implementation-advanced" title="Manual `WidgetRef` Implementation (Advanced)">Manual <code>WidgetRef</code> Implementation (Advanced)</a></li><li><a href="#authoring-custom-widget-libraries" title="Authoring Custom Widget Libraries">Authoring Custom Widget Libraries</a></li></ul></li></ul><h3><a href="#modules">Module Items</a></h3><ul class="block"><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#enums" title="Enums">Enums</a></li><li><a href="#traits" title="Traits">Traits</a></li><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="../index.html">In crate ratatui</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">ratatui</a></div><h1>Module <span>widgets</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/ratatui/widgets.rs.html#1-771">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Widgets are the building blocks of user interfaces in Ratatui.</p>
+<p>They are used to create and manage the layout and style of the terminal interface. Widgets can
+be combined and nested to create complex UIs, and can be easily customized to suit the needs of
+your application.</p>
+<p>Ratatui provides a wide variety of built-in widgets that can be used to quickly create UIs.
+Additionally, <a href="https://doc.rust-lang.org/1.95.0/alloc/string/struct.String.html" title="struct alloc::string::String"><code>String</code></a>, <a href="https://doc.rust-lang.org/1.95.0/std/primitive.str.html" title="primitive str"><code>&amp;str</code></a>, <a href="../prelude/struct.Span.html" title="struct ratatui::prelude::Span"><code>Span</code></a>, <a href="../prelude/struct.Line.html" title="struct ratatui::prelude::Line"><code>Line</code></a>, and <a href="../prelude/struct.Text.html" title="struct ratatui::prelude::Text"><code>Text</code></a> can be used as widgets
+(though often <a href="struct.Paragraph.html" title="struct ratatui::widgets::Paragraph"><code>Paragraph</code></a> is used instead of these directly as it allows wrapping and
+surrounding the text with a block).</p>
+<h2 id="crate-organization"><a class="doc-anchor" href="#crate-organization">§</a>Crate Organization</h2>
+<p>Starting with Ratatui 0.30.0, the project was split into multiple crates for better modularity:</p>
+<ul>
+<li><strong><a href="https://crates.io/crates/ratatui-core"><code>ratatui-core</code></a></strong>: Contains the core widget traits (<a href="../prelude/trait.Widget.html" title="trait ratatui::prelude::Widget"><code>Widget</code></a>, <a href="../prelude/trait.StatefulWidget.html" title="trait ratatui::prelude::StatefulWidget"><code>StatefulWidget</code></a>) and
+text-related types (<a href="https://doc.rust-lang.org/1.95.0/alloc/string/struct.String.html" title="struct alloc::string::String"><code>String</code></a>, <a href="https://doc.rust-lang.org/1.95.0/std/primitive.str.html" title="primitive str"><code>&amp;str</code></a>, <a href="../prelude/struct.Span.html" title="struct ratatui::prelude::Span"><code>Span</code></a>, <a href="../prelude/struct.Line.html" title="struct ratatui::prelude::Line"><code>Line</code></a>, <a href="../prelude/struct.Text.html" title="struct ratatui::prelude::Text"><code>Text</code></a>)</li>
+<li><strong><a href="https://crates.io/crates/ratatui-widgets"><code>ratatui-widgets</code></a></strong>: Contains all the built-in widget implementations (<a href="struct.Block.html" title="struct ratatui::widgets::Block"><code>Block</code></a>,
+<a href="struct.Paragraph.html" title="struct ratatui::widgets::Paragraph"><code>Paragraph</code></a>, <a href="struct.List.html" title="struct ratatui::widgets::List"><code>List</code></a>, etc.)</li>
+<li><strong><a href="../index.html" title="mod ratatui"><code>ratatui</code></a></strong>: The main crate that re-exports everything for convenience. The
+unstable <a href="trait.WidgetRef.html" title="trait ratatui::widgets::WidgetRef"><code>WidgetRef</code></a> and <a href="trait.StatefulWidgetRef.html" title="trait ratatui::widgets::StatefulWidgetRef"><code>StatefulWidgetRef</code></a> traits are defined in the main <code>ratatui</code>
+crate as they are experimental.</li>
+</ul>
+<p>This split serves different user needs:</p>
+<ul>
+<li><strong>App Authors</strong>: Most application developers should use the main <a href="../index.html" title="mod ratatui"><code>ratatui</code></a> crate,
+which provides everything needed to build terminal applications with widgets, backends, and
+layout systems</li>
+<li><strong>Widget Library Authors</strong>: When creating third-party widget libraries, consider depending
+only on <a href="https://crates.io/crates/ratatui-core"><code>ratatui-core</code></a> to avoid pulling in unnecessary built-in widgets and reduce
+compilation time for your users</li>
+<li><strong>Minimalist Projects</strong>: Use <a href="https://crates.io/crates/ratatui-core"><code>ratatui-core</code></a> directly if you only need the fundamental traits
+and text types without any built-in widgets</li>
+</ul>
+<p>The modular structure allows widget library authors to create lightweight dependencies while
+still being compatible with the broader Ratatui ecosystem.</p>
+<h2 id="built-in-widgets"><a class="doc-anchor" href="#built-in-widgets">§</a>Built-in Widgets</h2>
+<p>Ratatui provides a comprehensive set of built-in widgets:</p>
+<ul>
+<li><a href="struct.Block.html" title="struct ratatui::widgets::Block"><code>Block</code></a>: a basic widget that draws a block with optional borders, titles and styles.</li>
+<li><a href="struct.BarChart.html" title="struct ratatui::widgets::BarChart"><code>BarChart</code></a>: displays multiple datasets as bars with optional grouping.</li>
+<li><a href="calendar/struct.Monthly.html" title="struct ratatui::widgets::calendar::Monthly"><code>calendar::Monthly</code></a>: displays a single month.</li>
+<li><a href="canvas/struct.Canvas.html" title="struct ratatui::widgets::canvas::Canvas"><code>Canvas</code></a>: draws arbitrary shapes using drawing characters.</li>
+<li><a href="struct.Chart.html" title="struct ratatui::widgets::Chart"><code>Chart</code></a>: displays multiple datasets as a lines or scatter graph.</li>
+<li><a href="struct.Clear.html" title="struct ratatui::widgets::Clear"><code>Clear</code></a>: clears the area it occupies. Useful to render over previously drawn widgets.</li>
+<li><a href="struct.Fill.html" title="struct ratatui::widgets::Fill"><code>Fill</code></a>: paints every cell in its area with a single repeated symbol and style.</li>
+<li><a href="struct.Gauge.html" title="struct ratatui::widgets::Gauge"><code>Gauge</code></a>: displays progress percentage using block characters.</li>
+<li><a href="struct.LineGauge.html" title="struct ratatui::widgets::LineGauge"><code>LineGauge</code></a>: display progress as a line.</li>
+<li><a href="struct.List.html" title="struct ratatui::widgets::List"><code>List</code></a>: displays a list of items and allows selection.</li>
+<li><a href="struct.Paragraph.html" title="struct ratatui::widgets::Paragraph"><code>Paragraph</code></a>: displays a paragraph of optionally styled and wrapped text.</li>
+<li><a href="struct.Scrollbar.html" title="struct ratatui::widgets::Scrollbar"><code>Scrollbar</code></a>: displays a scrollbar.</li>
+<li><a href="struct.Sparkline.html" title="struct ratatui::widgets::Sparkline"><code>Sparkline</code></a>: display a single data set as a sparkline.</li>
+<li><a href="struct.Table.html" title="struct ratatui::widgets::Table"><code>Table</code></a>: displays multiple rows and columns in a grid and allows selection.</li>
+<li><a href="struct.Tabs.html" title="struct ratatui::widgets::Tabs"><code>Tabs</code></a>: displays a tab bar and allows selection.</li>
+<li><a href="struct.RatatuiLogo.html" title="struct ratatui::widgets::RatatuiLogo"><code>RatatuiLogo</code></a>: displays the Ratatui logo.</li>
+<li><a href="struct.RatatuiMascot.html" title="struct ratatui::widgets::RatatuiMascot"><code>RatatuiMascot</code></a>: displays the Ratatui mascot.</li>
+</ul>
+<p>Additionally, primitive text types implement <a href="../prelude/trait.Widget.html" title="trait ratatui::prelude::Widget"><code>Widget</code></a>:</p>
+<ul>
+<li><a href="https://doc.rust-lang.org/1.95.0/alloc/string/struct.String.html" title="struct alloc::string::String"><code>String</code></a>: renders the owned string content</li>
+<li><a href="https://doc.rust-lang.org/1.95.0/std/primitive.str.html" title="primitive str"><code>&amp;str</code></a>: renders the string slice content</li>
+<li><a href="../prelude/struct.Line.html" title="struct ratatui::prelude::Line"><code>Line</code></a>: renders a single line of styled text spans</li>
+<li><a href="../prelude/struct.Span.html" title="struct ratatui::prelude::Span"><code>Span</code></a>: renders a styled text segment</li>
+<li><a href="../prelude/struct.Text.html" title="struct ratatui::prelude::Text"><code>Text</code></a>: renders multiple lines of styled text</li>
+</ul>
+<p>For more information on these widgets, you can view the widget showcase and examples.</p>
+<h2 id="third-party-widgets"><a class="doc-anchor" href="#third-party-widgets">§</a>Third-Party Widgets</h2>
+<p>Beyond the built-in widgets, there’s a rich ecosystem of third-party widgets available that
+extend Ratatui’s functionality. These community-contributed widgets provide specialized UI
+components for various use cases.</p>
+<p>To discover third-party widgets:</p>
+<ul>
+<li><strong>Search crates.io</strong>: Look for crates with “tui” or “ratatui” in their names or descriptions</li>
+<li><strong>Awesome Ratatui</strong>: Check the <a href="https://github.com/ratatui-org/awesome-ratatui">Awesome Ratatui</a>
+repository for a curated list of widgets, libraries, and applications</li>
+<li><strong>Widget Showcase</strong>: Browse the <a href="https://ratatui.rs/showcase/third-party-widgets/">third-party widgets showcase</a>
+on the Ratatui website to see widgets in action</li>
+</ul>
+<p>These third-party widgets cover a wide range of functionality including specialized input
+components, data visualization widgets, layout helpers, and domain-specific UI elements.</p>
+<h2 id="widget-traits"><a class="doc-anchor" href="#widget-traits">§</a>Widget Traits</h2>
+<p>In Ratatui, widgets are implemented as Rust traits, which allow for easy implementation and
+extension. The main traits for widgets are:</p>
+<ul>
+<li><a href="../prelude/trait.Widget.html" title="trait ratatui::prelude::Widget"><code>Widget</code></a>: Basic trait for stateless widgets that are consumed when rendered</li>
+<li><a href="../prelude/trait.StatefulWidget.html" title="trait ratatui::prelude::StatefulWidget"><code>StatefulWidget</code></a>: Trait for widgets that maintain state between renders</li>
+<li><a href="trait.WidgetRef.html" title="trait ratatui::widgets::WidgetRef"><code>WidgetRef</code></a>: Trait for rendering widgets by reference (unstable)</li>
+<li><a href="trait.StatefulWidgetRef.html" title="trait ratatui::widgets::StatefulWidgetRef"><code>StatefulWidgetRef</code></a>: Trait for rendering stateful widgets by reference (unstable)</li>
+</ul>
+<h3 id="widget"><a class="doc-anchor" href="#widget">§</a><code>Widget</code></h3>
+<p>The <a href="../prelude/trait.Widget.html" title="trait ratatui::prelude::Widget"><code>Widget</code></a> trait is the most basic trait for widgets in Ratatui. It provides the basic
+functionality for rendering a widget onto a buffer. Widgets implementing this trait are consumed
+when rendered.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">pub trait </span>Widget {
+    <span class="kw">fn </span>render(<span class="self">self</span>, area: Rect, buf: <span class="kw-2">&amp;mut </span>Buffer);
+}</code></pre></div>
+<p>Prior to Ratatui 0.26.0, widgets were generally created for each frame as they were consumed
+during rendering. This meant that they were not meant to be stored but used as <em>commands</em> to
+draw common figures in the UI. Starting with 0.26.0, implementing widgets on references became
+the preferred pattern for reusability.</p>
+<h3 id="statefulwidget"><a class="doc-anchor" href="#statefulwidget">§</a><code>StatefulWidget</code></h3>
+<p>The <a href="../prelude/trait.StatefulWidget.html" title="trait ratatui::prelude::StatefulWidget"><code>StatefulWidget</code></a> trait is similar to the <a href="../prelude/trait.Widget.html" title="trait ratatui::prelude::Widget"><code>Widget</code></a> trait, but also includes state that
+can be managed and updated during rendering. This is useful for widgets that need to remember
+things between draw calls, such as scroll position or selection state.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">pub trait </span>StatefulWidget {
+    <span class="kw">type </span>State;
+    <span class="kw">fn </span>render(<span class="self">self</span>, area: Rect, buf: <span class="kw-2">&amp;mut </span>Buffer, state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State);
+}</code></pre></div>
+<p>For example, the built-in <a href="struct.List.html" title="struct ratatui::widgets::List"><code>List</code></a> widget can highlight the currently selected item. This
+requires maintaining an offset to ensure the selected item is visible within the viewport.
+Without state, the widget could only provide basic scrolling behavior, but with access to the
+previous offset, it can implement natural scrolling where the offset is preserved until the
+selected item moves out of view.</p>
+<h3 id="widgetref-and-statefulwidgetref"><a class="doc-anchor" href="#widgetref-and-statefulwidgetref">§</a><code>WidgetRef</code> and <code>StatefulWidgetRef</code></h3>
+<p>The <a href="trait.WidgetRef.html" title="trait ratatui::widgets::WidgetRef"><code>WidgetRef</code></a> and <a href="trait.StatefulWidgetRef.html" title="trait ratatui::widgets::StatefulWidgetRef"><code>StatefulWidgetRef</code></a> traits were introduced in Ratatui 0.26.0 to enable
+rendering widgets by reference instead of consuming them. These traits address several important
+use cases that the original <code>Widget</code> and <code>StatefulWidget</code> traits couldn’t handle elegantly.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">pub trait </span>WidgetRef {
+    <span class="kw">fn </span>render_ref(<span class="kw-2">&amp;</span><span class="self">self</span>, area: Rect, buf: <span class="kw-2">&amp;mut </span>Buffer);
+}
+
+<span class="kw">pub trait </span>StatefulWidgetRef {
+    <span class="kw">type </span>State;
+    <span class="kw">fn </span>render_ref(<span class="kw-2">&amp;</span><span class="self">self</span>, area: Rect, buf: <span class="kw-2">&amp;mut </span>Buffer, state: <span class="kw-2">&amp;mut </span><span class="self">Self</span>::State);
+}</code></pre></div>
+<p>The reference-based traits solve several key problems:</p>
+<ul>
+<li><strong>Reusability</strong>: Widgets can be rendered multiple times without being consumed</li>
+<li><strong>Collections</strong>: Store heterogeneous widgets in collections like <code>Vec&lt;Box&lt;dyn WidgetRef&gt;&gt;</code></li>
+<li><strong>Borrowing</strong>: Render widgets when you only have a reference, not ownership</li>
+<li><strong>Efficiency</strong>: Avoid unnecessary cloning or reconstruction for repeated renders</li>
+</ul>
+<p>These traits are currently <strong>experimental</strong> and gated behind the <code>unstable-widget-ref</code> feature
+flag. This means:</p>
+<ul>
+<li>The API may change in future releases</li>
+<li>Method names, signatures, or behavior might be adjusted based on community feedback</li>
+<li>You must explicitly enable the feature flag to use them: <code>features = ["unstable-widget-ref"]</code></li>
+<li>They are not covered by semantic versioning guarantees until stabilized</li>
+</ul>
+<p>The traits are being evaluated for potential breaking changes and improvements. See the
+<a href="https://github.com/ratatui/ratatui/issues/1287">tracking issue</a> for ongoing discussions and
+design considerations.</p>
+<h2 id="rendering-widgets"><a class="doc-anchor" href="#rendering-widgets">§</a>Rendering Widgets</h2>
+<p>Widgets are typically rendered using the <a href="../struct.Frame.html" title="struct ratatui::Frame"><code>Frame</code></a> type, which provides methods for rendering
+both consuming and reference-based widgets. These methods are usually called from the closure
+passed to <a href="../struct.Terminal.html#method.draw" title="method ratatui::Terminal::draw"><code>Terminal::draw</code></a>.</p>
+<h3 id="rendering-consuming-widgets"><a class="doc-anchor" href="#rendering-consuming-widgets">§</a>Rendering Consuming Widgets</h3>
+<p>Most widgets in Ratatui are rendered using <code>Frame::render_widget()</code>, which consumes the widget
+when rendering. This is the standard approach for stateless widgets that don’t need to persist
+data between frames.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code>terminal.draw(|frame| {
+    <span class="kw">let </span>widget = Paragraph::new(<span class="string">"Hello, world!"</span>);
+    frame.render_widget(widget, frame.area());
+});</code></pre></div><h3 id="rendering-widget-references"><a class="doc-anchor" href="#rendering-widget-references">§</a>Rendering Widget References</h3>
+<p>When you implement widgets on references (<code>Widget for &amp;MyWidget</code>), you can render them directly
+using the same <code>Frame::render_widget()</code> method. This approach enables widget reuse without
+reconstruction and is the recommended pattern for new widgets.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="comment">// Create the widget outside the draw closure
+</span><span class="kw">let </span>paragraph = Paragraph::new(<span class="string">"Hello, world!"</span>).block(Block::bordered());
+
+terminal.draw(|frame| {
+    <span class="comment">// Widget can be rendered by reference without being consumed
+    </span>frame.render_widget(<span class="kw-2">&amp;</span>paragraph, frame.area());
+});
+
+<span class="comment">// The widget can be used again in subsequent frames
+</span>terminal.draw(|frame| {
+    frame.render_widget(<span class="kw-2">&amp;</span>paragraph, frame.area());
+});</code></pre></div><h3 id="rendering-stateful-widgets"><a class="doc-anchor" href="#rendering-stateful-widgets">§</a>Rendering Stateful Widgets</h3>
+<p>Widgets that need to maintain state between frames use <code>Frame::render_stateful_widget()</code>. This
+method takes both the widget and a mutable reference to its state, allowing the widget to read
+and modify state during rendering (such as updating scroll positions or handling selections).</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span><span class="kw-2">mut </span>list_state = ListState::default();
+terminal.draw(|frame| {
+    <span class="kw">let </span>items = <span class="macro">vec!</span>[ListItem::new(<span class="string">"Item 1"</span>), ListItem::new(<span class="string">"Item 2"</span>)];
+    <span class="kw">let </span>list = List::new(items);
+    frame.render_stateful_widget(list, frame.area(), <span class="kw-2">&amp;mut </span>list_state);
+});</code></pre></div><h3 id="single-root-widget-pattern"><a class="doc-anchor" href="#single-root-widget-pattern">§</a>Single Root Widget Pattern</h3>
+<p>A common compositional pattern in Ratatui applications is to have a single root widget (often an
+<code>App</code> struct) that represents your entire application state. This widget is passed to
+<code>Frame::render_widget()</code>, and within its render method, it calls render on child widgets
+directly. This pattern provides a clean separation between your application logic and rendering
+code, and allows for easy composition of complex UIs from simpler components.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="attr">#[derive(Default)]
+</span><span class="kw">struct </span>App {
+    should_quit: bool,
+}
+
+<span class="kw">impl </span>Widget <span class="kw">for </span><span class="kw-2">&amp;</span>App {
+    <span class="kw">fn </span>render(<span class="self">self</span>, area: Rect, buf: <span class="kw-2">&amp;mut </span>Buffer) {
+        <span class="comment">// Render header
+        </span><span class="kw">let </span>header = Paragraph::new(<span class="string">"My App"</span>).block(Block::bordered());
+        header.render(Rect::new(area.x, area.y, area.width, <span class="number">3</span>), buf);
+
+        <span class="comment">// Render main content
+        </span><span class="kw">let </span>content = Paragraph::new(<span class="string">"Main content area"</span>);
+        content.render(
+            Rect::new(area.x, area.y + <span class="number">3</span>, area.width, area.height - <span class="number">3</span>),
+            buf,
+        );
+    }
+}</code></pre></div><h2 id="authoring-custom-widgets"><a class="doc-anchor" href="#authoring-custom-widgets">§</a>Authoring Custom Widgets</h2>
+<p>When implementing custom widgets in Ratatui, you’ll make fundamental decisions about how your
+widget manages state and how it’s used by applications. Understanding these choices will help
+you create widgets that fit well into your application’s architecture. Widget implementation
+involves several key architectural decisions that work together to determine how your widget
+behaves - these decisions are independent but complementary, allowing you to mix and match
+approaches based on your specific needs.</p>
+<p><strong>State Management</strong>: The first choice is where state lives. Some widgets need to track
+information between renders - things like scroll positions, selections, or counters. You can
+either build this state into the widget itself (widget-owned state) or keep it separate and pass
+it in during rendering (external state).</p>
+<p><strong>Ownership Model</strong>: The second choice is how the widget is consumed. Widgets can either be
+consumed when rendered (taking ownership) or work by reference (borrowing). Reference-based
+widgets can be stored and reused across multiple frames, while consuming widgets are created
+fresh each time.</p>
+<p><strong><code>StatefulWidget</code> vs Mutable References</strong>: When your widget needs state, you have two main
+approaches. The <a href="../prelude/trait.StatefulWidget.html" title="trait ratatui::prelude::StatefulWidget"><code>StatefulWidget</code></a> trait represents the established pattern - it separates the
+widget from its state, allowing the application to own and manage the state independently. This
+is what you’ll see in most existing Ratatui code and built-in widgets like <a href="struct.List.html" title="struct ratatui::widgets::List"><code>List</code></a> and
+<a href="struct.Table.html" title="struct ratatui::widgets::Table"><code>Table</code></a>. The mutable reference approach (<code>Widget for &amp;mut MyWidget</code>) is newer and less common,
+but useful when the state is intrinsic to the widget’s identity. With mutable references, the
+widget owns its state directly.</p>
+<p>The key question for state management is: “If I recreate this widget, should the state reset?”
+If yes (like a counter that should start at zero), use mutable references with widget-owned
+state. If no (like a list selection that should persist), use <a href="../prelude/trait.StatefulWidget.html" title="trait ratatui::prelude::StatefulWidget"><code>StatefulWidget</code></a> with external
+state that the application manages.</p>
+<p><strong>Evolution and Current Recommendations</strong>: Ratatui’s patterns have evolved significantly. Before
+version 0.26.0, widgets were typically consuming (<code>Widget for MyWidget</code>) and created fresh each
+frame. Starting with 0.26.0, reference-based widgets (<code>Widget for &amp;MyWidget</code>) became possible,
+allowing widgets to be stored and reused. You’ll encounter both patterns in existing code, but
+reference-based implementations are now recommended for new widgets because they enable
+reusability and automatic <a href="trait.WidgetRef.html" title="trait ratatui::widgets::WidgetRef"><code>WidgetRef</code></a> support through blanket implementations.</p>
+<p>For new widgets, implement <a href="../prelude/trait.Widget.html" title="trait ratatui::prelude::Widget"><code>Widget</code></a> or <a href="../prelude/trait.StatefulWidget.html" title="trait ratatui::prelude::StatefulWidget"><code>StatefulWidget</code></a> on references to your widget types
+(<code>&amp;MyWidget</code> or <code>&amp;mut MyWidget</code>). This provides reusability and automatic <a href="trait.WidgetRef.html" title="trait ratatui::widgets::WidgetRef"><code>WidgetRef</code></a> support.
+You can optionally implement the consuming version for backward compatibility.</p>
+<h3 id="state-management-patterns"><a class="doc-anchor" href="#state-management-patterns">§</a>State Management Patterns</h3>
+<p>For a comprehensive exploration of different approaches to handling both mutable and immutable
+state in widgets, see the <a href="https://github.com/ratatui/ratatui/tree/main/examples/concepts/state">state examples</a> in the Ratatui repository. These examples demonstrate
+various patterns including:</p>
+<p><strong>Immutable State Patterns</strong> (recommended for most use cases):</p>
+<ul>
+<li>Function-based immutable state (<code>fn render(frame: &amp;mut Frame, area: Rect, state: &amp;State)</code>)</li>
+<li>Shared reference widgets (<code>impl Widget for &amp;MyWidget</code>)</li>
+<li>Consuming widgets (<code>impl Widget for MyWidget</code>)</li>
+</ul>
+<p><strong>Mutable State Patterns</strong> (for widgets that modify state during rendering):</p>
+<ul>
+<li>Function-based mutable state (<code>fn render(frame: &amp;mut Frame, area: Rect, state: &amp;mut State)</code>)</li>
+<li>Mutable widget references (<code>impl Widget for &amp;mut MyWidget</code>)</li>
+<li><code>StatefulWidget</code> pattern (<code>impl StatefulWidget for MyWidget</code>)</li>
+<li>Custom component traits (<code>trait MyComponent { fn render(&amp;mut self, frame: &amp;mut Frame, area: Rect) }</code>)</li>
+<li>Interior mutability with <code>RefCell</code> (<code>struct MyWidget { state: Rc&lt;RefCell&lt;State&gt;&gt; }</code>)</li>
+<li>Lifetime-based mutable references (<code>struct MyWidget&lt;'a&gt; { state: &amp;'a mut State }</code>)</li>
+<li>Nested widget hierarchies (compositions with owned or external state)</li>
+</ul>
+<p>Each pattern has different trade-offs in terms of complexity, performance, and architectural
+fit, making them suitable for different use cases and application designs. For most
+applications, start with immutable patterns as they are simpler to reason about and less prone
+to borrowing issues.</p>
+<h3 id="shared-references-widget"><a class="doc-anchor" href="#shared-references-widget">§</a>Shared References (<code>&amp;Widget</code>)</h3>
+<p>The recommended pattern for most new widgets implements <a href="../prelude/trait.Widget.html" title="trait ratatui::prelude::Widget"><code>Widget</code></a> on a shared reference,
+allowing the widget to be rendered multiple times without being consumed. This approach is ideal
+for immutable widgets that don’t need to modify their internal state during rendering, and it’s
+the most common pattern you should use for new widgets.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">struct </span>MyWidget {
+    content: String,
+}
+
+<span class="kw">impl </span>Widget <span class="kw">for </span><span class="kw-2">&amp;</span>MyWidget {
+    <span class="kw">fn </span>render(<span class="self">self</span>, area: Rect, buf: <span class="kw-2">&amp;mut </span>Buffer) {
+        Line::raw(<span class="kw-2">&amp;</span><span class="self">self</span>.content).render(area, buf);
+    }
+}</code></pre></div>
+<p>This automatically provides <a href="trait.WidgetRef.html" title="trait ratatui::widgets::WidgetRef"><code>WidgetRef</code></a> support through blanket implementations and enables
+widgets to be stored and reused across frames without reconstruction. For most use cases where
+the widget doesn’t need to change its internal state during rendering, this is the best choice.</p>
+<h3 id="mutable-references-mut-widget"><a class="doc-anchor" href="#mutable-references-mut-widget">§</a>Mutable References (<code>&amp;mut Widget</code>)</h3>
+<p>For widgets that need to modify their internal state during rendering, implement <a href="../prelude/trait.Widget.html" title="trait ratatui::prelude::Widget"><code>Widget</code></a> on a
+mutable reference. This is a newer pattern that’s less common but useful when the state is
+intrinsic to the widget’s identity and behavior. Use this pattern when the widget should own and
+manage its state directly, rather than having external state passed in.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">struct </span>CounterWidget {
+    count: u32, <span class="comment">// This state belongs to the widget
+    </span>label: String,
+}
+
+<span class="kw">impl </span>Widget <span class="kw">for </span><span class="kw-2">&amp;mut </span>CounterWidget {
+    <span class="kw">fn </span>render(<span class="self">self</span>, area: Rect, buf: <span class="kw-2">&amp;mut </span>Buffer) {
+        <span class="self">self</span>.count += <span class="number">1</span>; <span class="comment">// State changes as part of rendering behavior
+        </span><span class="kw">let </span>text = <span class="macro">format!</span>(<span class="string">"{label}: {count}"</span>, label = <span class="self">self</span>.label, count = <span class="self">self</span>.count);
+        Line::raw(text).render(area, buf);
+    }
+}</code></pre></div>
+<p>This pattern works well when the widget owns its state and the state is part of the widget’s
+identity. It’s ideal for counters, animations, cursors, progress indicators, or other
+widget-specific behavior where the state should reset when you create a new widget instance.</p>
+<h3 id="consuming-widget-implementation"><a class="doc-anchor" href="#consuming-widget-implementation">§</a>Consuming Widget Implementation</h3>
+<p>The consuming widget pattern was the original approach in Ratatui and remains very common in
+existing codebases. You’ll encounter this pattern frequently when reading examples and community
+code. Widgets implementing this pattern take ownership when rendered, which means they’re
+consumed on each use. While not the recommended approach for new widgets, it’s still useful to
+understand this pattern for compatibility and when working with existing code.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">struct </span>GreetingWidget {
+    name: String,
+}
+
+<span class="kw">impl </span>Widget <span class="kw">for </span>GreetingWidget {
+    <span class="kw">fn </span>render(<span class="self">self</span>, area: Rect, buf: <span class="kw-2">&amp;mut </span>Buffer) {
+        <span class="kw">let </span>hello = Span::raw(<span class="string">"Hello, "</span>);
+        <span class="kw">let </span>name = Span::styled(<span class="self">self</span>.name, Modifier::BOLD);
+        <span class="kw">let </span>line = Line::from(<span class="macro">vec!</span>[hello, name]);
+        line.render(area, buf);
+    }
+}</code></pre></div>
+<p>This approach is simpler and works well for widgets created fresh each frame, but it means the
+widget cannot be reused. Before reference-based widgets were introduced in version 0.26.0, this
+was the standard pattern, and it’s still valid for simple use cases or when following existing
+code patterns.</p>
+<p>The easiest way to implement this pattern when you have a reference-based widget is to implement
+the consuming version on the owned type, which can then call the reference-based implementation:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">impl </span>Widget <span class="kw">for </span>GreetingWidget {
+    <span class="kw">fn </span>render(<span class="self">self</span>, area: Rect, buf: <span class="kw-2">&amp;mut </span>Buffer) {
+        <span class="comment">// Call the reference-based implementation
+        </span>(<span class="kw-2">&amp;</span><span class="self">self</span>).render(area, buf);
+    }
+}</code></pre></div><h3 id="statefulwidget-implementation"><a class="doc-anchor" href="#statefulwidget-implementation">§</a><code>StatefulWidget</code> Implementation</h3>
+<p>When your widget needs to work with external state - data that exists independently of the
+widget and should persist between widget instances - implement <a href="../prelude/trait.StatefulWidget.html" title="trait ratatui::prelude::StatefulWidget"><code>StatefulWidget</code></a>. This is the
+established pattern used by built-in widgets like <a href="struct.List.html" title="struct ratatui::widgets::List"><code>List</code></a> and <a href="struct.Table.html" title="struct ratatui::widgets::Table"><code>Table</code></a>, where the widget
+configuration is separate from application state like selections or scroll positions.</p>
+<p>Like <a href="../prelude/trait.Widget.html" title="trait ratatui::prelude::Widget"><code>Widget</code></a>, you can implement <a href="../prelude/trait.StatefulWidget.html" title="trait ratatui::prelude::StatefulWidget"><code>StatefulWidget</code></a> on references to allow reuse, though it’s
+more common to see this trait implemented on owned types which are consumed during rendering.</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">struct </span>ListView {
+    items: Vec&lt;String&gt;,
+}
+
+<span class="attr">#[derive(Default)]
+</span><span class="kw">struct </span>ListState {
+    selected: <span class="prelude-ty">Option</span>&lt;usize&gt;, <span class="comment">// This is application state
+    </span>scroll_offset: usize,
+}
+
+<span class="kw">impl </span>StatefulWidget <span class="kw">for </span>ListView {
+    <span class="kw">type </span>State = ListState;
+
+    <span class="kw">fn </span>render(<span class="self">self</span>, area: Rect, buf: <span class="kw-2">&amp;mut </span>Buffer, state: <span class="kw-2">&amp;mut </span>ListState) {
+        <span class="comment">// Render based on external state, possibly modify for scrolling
+        </span><span class="kw">let </span>display_text = state
+            .selected
+            .and_then(|i| <span class="self">self</span>.items.get(i))
+            .map_or(<span class="string">"None selected"</span>, |s| s.as_str());
+        Line::raw(display_text).render(area, buf);
+    }
+}</code></pre></div>
+<p>This pattern is ideal for selections, scroll positions, form data, or any state that should
+persist between renders or be shared across your application. The state exists independently of
+the widget, so recreating the widget doesn’t reset the state.</p>
+<h4 id="automatic-widgetref-support"><a class="doc-anchor" href="#automatic-widgetref-support">§</a>Automatic <code>WidgetRef</code> Support</h4>
+<p>When you implement <code>Widget for &amp;MyWidget</code>, you automatically get <a href="trait.WidgetRef.html" title="trait ratatui::widgets::WidgetRef"><code>WidgetRef</code></a> support without
+any additional code. Ratatui provides blanket implementations that automatically implement these
+traits for any type that implements <a href="../prelude/trait.Widget.html" title="trait ratatui::prelude::Widget"><code>Widget</code></a> or <a href="../prelude/trait.StatefulWidget.html" title="trait ratatui::prelude::StatefulWidget"><code>StatefulWidget</code></a> on a reference. This means
+that implementing <code>Widget for &amp;MyWidget</code> gives you both the standard widget functionality and
+the unstable <a href="trait.WidgetRef.html" title="trait ratatui::widgets::WidgetRef"><code>WidgetRef</code></a> capabilities for free.</p>
+<h3 id="manual-widgetref-implementation-advanced"><a class="doc-anchor" href="#manual-widgetref-implementation-advanced">§</a>Manual <code>WidgetRef</code> Implementation (Advanced)</h3>
+<p>Manual implementation of <a href="trait.WidgetRef.html" title="trait ratatui::widgets::WidgetRef"><code>WidgetRef</code></a> or <a href="trait.StatefulWidgetRef.html" title="trait ratatui::widgets::StatefulWidgetRef"><code>StatefulWidgetRef</code></a> is only necessary when you need
+to store widgets as trait objects (<code>Box&lt;dyn WidgetRef&gt;</code>) or when you want a different API than
+the reference-based <a href="../prelude/trait.Widget.html" title="trait ratatui::prelude::Widget"><code>Widget</code></a> implementation provides. In most cases, the automatic
+implementation via blanket implementations is sufficient.</p>
+<p>These traits enable several benefits:</p>
+<ul>
+<li>Widgets can be stored and rendered multiple times without reconstruction</li>
+<li>Collections of widgets with different types can be stored using <code>Box&lt;dyn WidgetRef&gt;</code></li>
+<li>Avoids the consumption model while maintaining backward compatibility</li>
+</ul>
+<p>Manual implementation is only needed when you want to use trait objects or need a different API
+than the reference-based <a href="../prelude/trait.Widget.html" title="trait ratatui::prelude::Widget"><code>Widget</code></a> implementation:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">struct </span>GreetingWidget {
+    name: String,
+}
+
+<span class="comment">// Manual WidgetRef implementation (usually not needed)
+</span><span class="kw">impl </span>WidgetRef <span class="kw">for </span>GreetingWidget {
+    <span class="kw">fn </span>render_ref(<span class="kw-2">&amp;</span><span class="self">self</span>, area: Rect, buf: <span class="kw-2">&amp;mut </span>Buffer) {
+        <span class="kw">let </span>hello = Span::raw(<span class="string">"Hello, "</span>);
+        <span class="kw">let </span>name = Span::styled(<span class="kw-2">&amp;</span><span class="self">self</span>.name, Modifier::BOLD);
+        <span class="kw">let </span>line = Line::from(<span class="macro">vec!</span>[hello, name]);
+        line.render(area, buf);
+    }
+}
+
+<span class="comment">// For backward compatibility
+</span><span class="kw">impl </span>Widget <span class="kw">for </span>GreetingWidget {
+    <span class="kw">fn </span>render(<span class="self">self</span>, area: Rect, buf: <span class="kw-2">&amp;mut </span>Buffer) {
+        <span class="self">self</span>.render_ref(area, buf);
+    }
+}</code></pre></div>
+<p>This pattern allows the widget to be stored and rendered multiple times:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">struct </span>App {
+    greeting: GreetingWidget,
+}
+
+<span class="comment">// The widget can be rendered multiple times without reconstruction
+</span><span class="kw">fn </span>render_app(app: <span class="kw-2">&amp;</span>App, area: Rect, buf: <span class="kw-2">&amp;mut </span>Buffer) {
+    app.greeting.render_ref(area, buf);
+}</code></pre></div><h4 id="using-trait-objects-for-dynamic-collections"><a class="doc-anchor" href="#using-trait-objects-for-dynamic-collections">§</a>Using Trait Objects for Dynamic Collections</h4>
+<p>The main benefit of manual <a href="trait.WidgetRef.html" title="trait ratatui::widgets::WidgetRef"><code>WidgetRef</code></a> implementation is the ability to create collections of
+different widget types using trait objects. This is useful when you need to store widgets with
+types that are not known at compile time:</p>
+
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">let </span>widgets: Vec&lt;Box&lt;<span class="kw">dyn </span>WidgetRef&gt;&gt; = <span class="macro">vec!</span>[Box::new(Greeting), Box::new(Farewell)];
+
+<span class="kw">for </span>widget <span class="kw">in </span><span class="kw-2">&amp;</span>widgets {
+    widget.render_ref(area, buf);
+}</code></pre></div>
+<p>However, if you implement <code>Widget for &amp;MyWidget</code>, you can achieve similar functionality by
+storing references or using the automatic <a href="trait.WidgetRef.html" title="trait ratatui::widgets::WidgetRef"><code>WidgetRef</code></a> implementation without needing to
+manually implement the trait.</p>
+<h3 id="authoring-custom-widget-libraries"><a class="doc-anchor" href="#authoring-custom-widget-libraries">§</a>Authoring Custom Widget Libraries</h3>
+<p>When creating a library of custom widgets for distribution, there are specific considerations
+that will make your library more compatible and accessible to a wider range of users. Following
+these guidelines will help ensure your widget library works well in various environments and
+can be easily integrated into different types of applications.</p>
+<h4 id="depend-on-ratatui_core"><a class="doc-anchor" href="#depend-on-ratatui_core">§</a>Depend on <code>ratatui_core</code></h4>
+<p>For widget libraries, depend on <a href="https://crates.io/crates/ratatui-core"><code>ratatui-core</code></a> instead of the full <code>ratatui</code> crate. This
+provides all the essential types and traits needed for widget development while avoiding
+unnecessary dependencies on backends and other components that widget libraries don’t need.</p>
+<p>This approach offers several key advantages for both library authors and users:</p>
+<ul>
+<li><strong>Lighter dependencies</strong>: Users don’t pull in backend code they don’t need, keeping their
+dependency tree smaller and more focused</li>
+<li><strong>Better compile times</strong>: Fewer dependencies mean faster builds for both development and
+end-user projects</li>
+<li><strong>Future-proofing</strong>: Your library remains compatible as Ratatui evolves its architecture,
+since core widget functionality is stable across versions</li>
+</ul>
+<h4 id="make-your-crate-no_std-compatible"><a class="doc-anchor" href="#make-your-crate-no_std-compatible">§</a>Make Your Crate <code>no_std</code> Compatible</h4>
+<p>For maximum compatibility, especially in embedded environments, consider making your widget
+library <code>no_std</code> compatible. This is often easier than you might expect and broadens the range
+of projects that can use your widgets.</p>
+<p>For more detail on advantages of this, maintenance tips and feature flags, see the
+<a href="https://ratatui.rs/concepts/no-std/">no-std concept guide</a>.</p>
+<p>To implement <code>no_std</code> compatibility, add the <code>#![no_std]</code> attribute at the top of your <code>lib.rs</code>.
+When working in a <code>no_std</code> environment, you’ll need to make a few adjustments:</p>
+<ul>
+<li>Use <code>core::</code> instead of <code>std::</code> for basic functionality</li>
+<li>Add <code>extern crate alloc;</code> to access allocation types</li>
+<li>Use <code>alloc::</code> for heap-allocated types like <code>String</code>, <code>Vec</code>, and <code>Box</code></li>
+</ul>
+<p>Here’s a complete example of a <code>no_std</code> compatible widget:</p>
+
+<div class="example-wrap ignore"><a href="#" class="tooltip" title="This example is not tested">ⓘ</a><pre class="rust rust-example-rendered"><code><span class="attr">#![no_std]
+
+</span><span class="kw">extern crate </span>alloc;
+
+<span class="kw">use </span>alloc::string::String;
+
+<span class="kw">use </span>ratatui_core::buffer::Buffer;
+<span class="kw">use </span>ratatui_core::layout::Rect;
+<span class="kw">use </span>ratatui_core::text::Line;
+<span class="kw">use </span>ratatui_core::widgets::Widget;
+
+<span class="kw">struct </span>MyWidget {
+    content: String,
+}
+
+<span class="kw">impl </span>Widget <span class="kw">for </span><span class="kw-2">&amp;</span>MyWidget {
+    <span class="kw">fn </span>render(<span class="self">self</span>, area: Rect, buf: <span class="kw-2">&amp;mut </span>Buffer) {
+        Line::raw(<span class="kw-2">&amp;</span><span class="self">self</span>.content).render(area, buf);
+    }
+}</code></pre></div>
+<p>The benefits of <code>no_std</code> compatibility include:</p>
+<ul>
+<li><strong>Broader compatibility</strong>: Your widgets work seamlessly in embedded environments and other
+<code>no_std</code> contexts where standard library functionality isn’t available</li>
+<li><strong>Easy to adopt</strong>: Even if you haven’t worked with <code>no_std</code> development before, the changes
+are typically minimal for widget libraries. Most widget logic involves basic data manipulation
+and rendering operations that work well within <code>no_std</code> constraints, making this compatibility
+straightforward to implement</li>
+</ul>
+</div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="calendar/index.html" title="mod ratatui::widgets::calendar">calendar</a></dt><dd>A simple calendar widget. <code>(feature: widget-calendar)</code></dd><dt><a class="mod" href="canvas/index.html" title="mod ratatui::widgets::canvas">canvas</a></dt><dd>A <a href="canvas/struct.Canvas.html" title="struct ratatui::widgets::canvas::Canvas"><code>Canvas</code></a> and a collection of <a href="canvas/trait.Shape.html" title="trait ratatui::widgets::canvas::Shape"><code>Shape</code></a>s.</dd></dl><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.Axis.html" title="struct ratatui::widgets::Axis">Axis</a></dt><dd>An X or Y axis for the <a href="struct.Chart.html" title="struct ratatui::widgets::Chart"><code>Chart</code></a> widget</dd><dt><a class="struct" href="struct.Bar.html" title="struct ratatui::widgets::Bar">Bar</a></dt><dd>A bar to be shown by the <a href="struct.BarChart.html" title="struct ratatui::widgets::BarChart"><code>BarChart</code></a> widget.</dd><dt><a class="struct" href="struct.BarChart.html" title="struct ratatui::widgets::BarChart">BarChart</a></dt><dd>A chart showing values as <a href="struct.Bar.html" title="struct ratatui::widgets::Bar">bars</a>.</dd><dt><a class="struct" href="struct.BarGroup.html" title="struct ratatui::widgets::BarGroup">BarGroup</a></dt><dd>A group of bars to be shown by the Barchart.</dd><dt><a class="struct" href="struct.Block.html" title="struct ratatui::widgets::Block">Block</a></dt><dd>A widget that renders borders, titles, and padding around other widgets.</dd><dt><a class="struct" href="struct.Borders.html" title="struct ratatui::widgets::Borders">Borders</a></dt><dd>Bitflags that can be composed to set the visible borders essentially on the block widget.</dd><dt><a class="struct" href="struct.Cell.html" title="struct ratatui::widgets::Cell">Cell</a></dt><dd>A <a href="struct.Cell.html" title="struct ratatui::widgets::Cell"><code>Cell</code></a> contains the <a href="../prelude/struct.Text.html" title="struct ratatui::prelude::Text"><code>Text</code></a> to be displayed in a <a href="struct.Row.html" title="struct ratatui::widgets::Row"><code>Row</code></a> of a <a href="struct.Table.html" title="struct ratatui::widgets::Table"><code>Table</code></a>.</dd><dt><a class="struct" href="struct.Chart.html" title="struct ratatui::widgets::Chart">Chart</a></dt><dd>A widget to plot one or more <a href="struct.Dataset.html" title="struct ratatui::widgets::Dataset"><code>Dataset</code></a> in a cartesian coordinate system</dd><dt><a class="struct" href="struct.Clear.html" title="struct ratatui::widgets::Clear">Clear</a></dt><dd>A widget to clear/reset a certain area to allow overdrawing (e.g. for popups).</dd><dt><a class="struct" href="struct.Dataset.html" title="struct ratatui::widgets::Dataset">Dataset</a></dt><dd>A group of data points</dd><dt><a class="struct" href="struct.Dimmed.html" title="struct ratatui::widgets::Dimmed">Dimmed</a></dt><dd>A <a href="trait.CellEffect.html" title="trait ratatui::widgets::CellEffect"><code>CellEffect</code></a> that dims the shadow cells by setting the <a href="../prelude/struct.Modifier.html#associatedconstant.DIM" title="associated constant ratatui::prelude::Modifier::DIM"><code>DIM</code></a> modifier.</dd><dt><a class="struct" href="struct.Fill.html" title="struct ratatui::widgets::Fill">Fill</a></dt><dd>A widget that fills its render area with a single repeated symbol and style.</dd><dt><a class="struct" href="struct.Gauge.html" title="struct ratatui::widgets::Gauge">Gauge</a></dt><dd>A widget to display a progress bar.</dd><dt><a class="struct" href="struct.LineGauge.html" title="struct ratatui::widgets::LineGauge">Line<wbr>Gauge</a></dt><dd>A compact widget to display a progress bar over a single thin line.</dd><dt><a class="struct" href="struct.List.html" title="struct ratatui::widgets::List">List</a></dt><dd>A widget to display several items among which one can be selected (optional)</dd><dt><a class="struct" href="struct.ListItem.html" title="struct ratatui::widgets::ListItem">List<wbr>Item</a></dt><dd>A single item in a <a href="struct.List.html" title="struct ratatui::widgets::List"><code>List</code></a></dd><dt><a class="struct" href="struct.ListState.html" title="struct ratatui::widgets::ListState">List<wbr>State</a></dt><dd>State of the <a href="struct.List.html" title="struct ratatui::widgets::List"><code>List</code></a> widget</dd><dt><a class="struct" href="struct.Padding.html" title="struct ratatui::widgets::Padding">Padding</a></dt><dd>Defines the padding for a <a href="struct.Block.html" title="struct ratatui::widgets::Block"><code>Block</code></a>.</dd><dt><a class="struct" href="struct.Paragraph.html" title="struct ratatui::widgets::Paragraph">Paragraph</a></dt><dd>A widget to display some text.</dd><dt><a class="struct" href="struct.RatatuiLogo.html" title="struct ratatui::widgets::RatatuiLogo">Ratatui<wbr>Logo</a></dt><dd>A widget that renders the Ratatui logo</dd><dt><a class="struct" href="struct.RatatuiMascot.html" title="struct ratatui::widgets::RatatuiMascot">Ratatui<wbr>Mascot</a></dt><dd>A widget that renders the Ratatui mascot</dd><dt><a class="struct" href="struct.Row.html" title="struct ratatui::widgets::Row">Row</a></dt><dd>A single row of data to be displayed in a <a href="struct.Table.html" title="struct ratatui::widgets::Table"><code>Table</code></a> widget.</dd><dt><a class="struct" href="struct.Scrollbar.html" title="struct ratatui::widgets::Scrollbar">Scrollbar</a></dt><dd>A widget to display a scrollbar</dd><dt><a class="struct" href="struct.ScrollbarState.html" title="struct ratatui::widgets::ScrollbarState">Scrollbar<wbr>State</a></dt><dd>A struct representing the state of a Scrollbar widget.</dd><dt><a class="struct" href="struct.Shadow.html" title="struct ratatui::widgets::Shadow">Shadow</a></dt><dd>A configurable shadow that can be rendered behind a <a href="struct.Block.html" title="struct ratatui::widgets::Block"><code>Block</code></a>.</dd><dt><a class="struct" href="struct.Sparkline.html" title="struct ratatui::widgets::Sparkline">Sparkline</a></dt><dd>Widget to render a sparkline over one or more lines.</dd><dt><a class="struct" href="struct.SparklineBar.html" title="struct ratatui::widgets::SparklineBar">Sparkline<wbr>Bar</a></dt><dd>An bar in a <code>Sparkline</code>.</dd><dt><a class="struct" href="struct.Table.html" title="struct ratatui::widgets::Table">Table</a></dt><dd>A widget to display data in formatted columns.</dd><dt><a class="struct" href="struct.TableState.html" title="struct ratatui::widgets::TableState">Table<wbr>State</a></dt><dd>State of a <a href="struct.Table.html" title="struct ratatui::widgets::Table"><code>Table</code></a> widget</dd><dt><a class="struct" href="struct.Tabs.html" title="struct ratatui::widgets::Tabs">Tabs</a></dt><dd>A widget that displays a horizontal set of Tabs with a single tab selected.</dd><dt><a class="struct" href="struct.Wrap.html" title="struct ratatui::widgets::Wrap">Wrap</a></dt><dd>Describes how to wrap text across lines.</dd></dl><h2 id="enums" class="section-header">Enums<a href="#enums" class="anchor">§</a></h2><dl class="item-table"><dt><a class="enum" href="enum.BorderType.html" title="enum ratatui::widgets::BorderType">Border<wbr>Type</a></dt><dd>The type of border of a <a href="struct.Block.html" title="struct ratatui::widgets::Block"><code>Block</code></a>.</dd><dt><a class="enum" href="enum.GraphType.html" title="enum ratatui::widgets::GraphType">Graph<wbr>Type</a></dt><dd>Used to determine which style of graphing to use</dd><dt><a class="enum" href="enum.HighlightSpacing.html" title="enum ratatui::widgets::HighlightSpacing">Highlight<wbr>Spacing</a></dt><dd>This option allows the user to configure the “highlight symbol” column width spacing</dd><dt><a class="enum" href="enum.LegendPosition.html" title="enum ratatui::widgets::LegendPosition">Legend<wbr>Position</a></dt><dd>Allow users to specify the position of a legend in a <a href="struct.Chart.html" title="struct ratatui::widgets::Chart"><code>Chart</code></a></dd><dt><a class="enum" href="enum.ListDirection.html" title="enum ratatui::widgets::ListDirection">List<wbr>Direction</a></dt><dd>Defines the direction in which the list will be rendered.</dd><dt><a class="enum" href="enum.MascotEyeColor.html" title="enum ratatui::widgets::MascotEyeColor">Mascot<wbr>EyeColor</a></dt><dd>State for the mascot’s eye</dd><dt><a class="enum" href="enum.RatatuiLogoSize.html" title="enum ratatui::widgets::RatatuiLogoSize">Ratatui<wbr>Logo<wbr>Size</a></dt><dd>The size of the logo</dd><dt><a class="enum" href="enum.RenderDirection.html" title="enum ratatui::widgets::RenderDirection">Render<wbr>Direction</a></dt><dd>Defines the direction in which sparkline will be rendered.</dd><dt><a class="enum" href="enum.ScrollDirection.html" title="enum ratatui::widgets::ScrollDirection">Scroll<wbr>Direction</a></dt><dd>An enum representing a scrolling direction.</dd><dt><a class="enum" href="enum.ScrollbarOrientation.html" title="enum ratatui::widgets::ScrollbarOrientation">Scrollbar<wbr>Orientation</a></dt><dd>This is the position of the scrollbar around a given area.</dd><dt><a class="enum" href="enum.TitlePosition.html" title="enum ratatui::widgets::TitlePosition">Title<wbr>Position</a></dt><dd>Defines the position of the title.</dd></dl><h2 id="traits" class="section-header">Traits<a href="#traits" class="anchor">§</a></h2><dl class="item-table"><dt><a class="trait" href="trait.BlockExt.html" title="trait ratatui::widgets::BlockExt">Block<wbr>Ext</a></dt><dd>An extension trait for <a href="struct.Block.html" title="struct ratatui::widgets::Block"><code>Block</code></a> that provides some convenience methods.</dd><dt><a class="trait" href="trait.CellEffect.html" title="trait ratatui::widgets::CellEffect">Cell<wbr>Effect</a></dt><dd>A cell effect that modifies the cells covered by a <a href="struct.Shadow.html" title="struct ratatui::widgets::Shadow"><code>Shadow</code></a>.</dd><dt><a class="trait" href="trait.FrameExt.html" title="trait ratatui::widgets::FrameExt">Frame<wbr>Ext</a></dt><dd>Extension trait for [<code>Frame</code>] that provides methods to render <a href="trait.WidgetRef.html" title="trait ratatui::widgets::WidgetRef"><code>WidgetRef</code></a> and
+<a href="trait.StatefulWidgetRef.html" title="trait ratatui::widgets::StatefulWidgetRef"><code>StatefulWidgetRef</code></a> to the current buffer.</dd><dt><a class="trait" href="trait.StatefulWidget.html" title="trait ratatui::widgets::StatefulWidget">Stateful<wbr>Widget</a></dt><dd>A <code>StatefulWidget</code> is a widget that can take advantage of some local state to remember things
+between two draw calls.</dd><dt><a class="trait" href="trait.StatefulWidgetRef.html" title="trait ratatui::widgets::StatefulWidgetRef">Stateful<wbr>Widget<wbr>Ref</a></dt><dd>A <code>StatefulWidgetRef</code> is a trait that allows rendering a stateful widget by reference.</dd><dt><a class="trait" href="trait.Widget.html" title="trait ratatui::widgets::Widget">Widget</a></dt><dd>A <code>Widget</code> is a type that can be drawn on a <a href="../prelude/struct.Buffer.html" title="struct ratatui::prelude::Buffer"><code>Buffer</code></a> in a given <a href="../prelude/struct.Rect.html" title="struct ratatui::prelude::Rect"><code>Rect</code></a>.</dd><dt><a class="trait" href="trait.WidgetRef.html" title="trait ratatui::widgets::WidgetRef">Widget<wbr>Ref</a></dt><dd>A <code>WidgetRef</code> is a trait that allows rendering a widget by reference.</dd></dl><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.dimmed.html" title="fn ratatui::widgets::dimmed">dimmed</a></dt><dd>Creates a <a href="struct.Dimmed.html" title="struct ratatui::widgets::Dimmed"><code>Dimmed</code></a> shadow effect.</dd></dl></section></div></main></body></html>
