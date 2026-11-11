@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Constraint","Direction","Flex","HorizontalAlignment","Spacing","VerticalAlignment"],"struct":["Columns","Layout","Margin","Offset","Position","Positions","Rect","Rows","Size"],"type":["Alignment"]};

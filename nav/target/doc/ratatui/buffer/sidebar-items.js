@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["CellDiffOption"],"struct":["Buffer","BufferDiff","Cell"],"trait":["CellWidth"]};

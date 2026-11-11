@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["MapResolution"],"struct":["Canvas","Circle","Context","FilledLine","Label","Line","Map","Painter","Points","Rectangle"],"trait":["Shape"]};
