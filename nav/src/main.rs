@@ -1,12 +1,15 @@
-use std::{ env, fs, io };
+use std::{ collections::HashSet, env, fs, io };
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{ Path, PathBuf };
 use std::process::{ Command, Stdio };
+use std::time::SystemTime;
+use chrono::{ DateTime, Local };
+use unicode_width::UnicodeWidthStr;
 use ratatui::{
     crossterm:: {
         cursor::{ Hide, MoveTo, Show },
-        event::{ self, Event, KeyCode, KeyEventKind },
+        event::{ self, Event, KeyCode, KeyEventKind, KeyModifiers },
         execute,
         terminal::{ Clear, ClearType, disable_raw_mode, enable_raw_mode },
     },
@@ -22,18 +25,126 @@ use ratatui::{
 
 const PANE_HEIGHT: u16 = 16;
 const PAGE_STEP: usize = PANE_HEIGHT as usize - 2; // visible rows inside the border
+// ratatui's List reserves this much width on *every* row for the highlight symbol ("> "),
+// not just the selected one, so column padding must account for it too.
+const SELECTION_GUTTER_WIDTH: usize = 2;
 const DIR_ICON: &str = "📁";
 const FILE_ICON: &str = "📄";
 const EXE_ELF_ICON: &str = "➤";
 const HINTS: &[&str] = &[
-    "(q) quit", "(j) ↓", "(k) ↑", "{/} page", "(c) cd", "(.) ..", 
-    "(a) hidden", "(d) cmd",  "(m) mkdir", "(t) touch", "(o) open", "(r) rename", "(g) grep", "(e) move",
-    // (p) clip, (p) for path , (f) for file
+    "(q) quit", "(j) ↓", "(k) ↑", "{/} page", "(c) cd", "(.) ..", "(o) open", "(s) select",
+    "(e) move", "(y) copy", "(d) cmd",  "(m) mkdir", "(t) touch", "(r) rename", "(g) grep",
+    "(alt+a) hide/show", "(alt+s) sort",
 ];
 
 struct FileEntry {
     name: String,
     is_dir: bool,
+    size: u64,
+    created: Option<SystemTime>,
+    modified: Option<SystemTime>,
+    accessed: Option<SystemTime>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum SortKey {
+    Name,
+    Size,
+    Type,
+    Created,
+    Modified,
+    Accessed,
+}
+
+enum PendingAction {
+    Move(Vec<PathBuf>),
+    Copy(Vec<PathBuf>),
+}
+
+/// The file extension nav sorts/displays under "type" — lowercased, "dir" for directories,
+/// "-" when there's no extension.
+fn file_type(entry: &FileEntry) -> String {
+    if entry.is_dir {
+        return "dir".to_string();
+    }
+    Path::new(&entry.name)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(str::to_lowercase)
+        .unwrap_or_else(|| "-".to_string())
+}
+
+fn format_size(bytes: u64) -> String {
+    const UNITS: [&str; 5] = ["B", "K", "M", "G", "T"];
+    let mut size = bytes as f64;
+    let mut unit = 0;
+    while size >= 1024.0 && unit < UNITS.len() - 1 {
+        size /= 1024.0;
+        unit += 1;
+    }
+    if unit == 0 {
+        format!("{bytes}B")
+    } else {
+        format!("{size:.1}{}", UNITS[unit])
+    }
+}
+
+fn format_time(time: Option<SystemTime>) -> String {
+    match time {
+        Some(time) => DateTime::<Local>::from(time).format("%Y-%m-%d %H:%M").to_string(),
+        None => "-".to_string(),
+    }
+}
+
+/// Column text shown to the right of each entry for every sort key but `Name` (which needs
+/// no extra column since the name itself is already the sort key).
+fn column_value(entry: &FileEntry, sort_key: SortKey) -> Option<String> {
+    match sort_key {
+        SortKey::Name => None,
+        SortKey::Size => Some(format_size(entry.size)),
+        SortKey::Type => Some(file_type(entry)),
+        SortKey::Created => Some(format_time(entry.created)),
+        SortKey::Modified => Some(format_time(entry.modified)),
+        SortKey::Accessed => Some(format_time(entry.accessed)),
+    }
+}
+
+/// Fixed display width per sort key, so the column lines up across rows regardless of how
+/// long any individual value happens to be (dates are always 16 chars; size/type are padded
+/// generously for the rare long value).
+fn column_width(sort_key: SortKey) -> usize {
+    match sort_key {
+        SortKey::Name => 0,
+        SortKey::Size => 7,
+        SortKey::Type => 8,
+        SortKey::Created | SortKey::Modified | SortKey::Accessed => 16,
+    }
+}
+
+/// Directories always sort before files; within each group, entries sort by `sort_key`.
+/// Size and the time-based keys sort newest/largest first since that's usually what's
+/// wanted; name and type sort ascending (type ties break on name).
+fn sort_entries(entries: &mut [FileEntry], sort_key: SortKey) {
+    entries.sort_by(|a, b| {
+        b.is_dir.cmp(&a.is_dir).then_with(|| match sort_key {
+            SortKey::Name => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
+            SortKey::Type => file_type(a).cmp(&file_type(b)).then_with(|| a.name.to_lowercase().cmp(&b.name.to_lowercase())),
+            SortKey::Size => b.size.cmp(&a.size),
+            SortKey::Created => b.created.cmp(&a.created),
+            SortKey::Modified => b.modified.cmp(&a.modified),
+            SortKey::Accessed => b.accessed.cmp(&a.accessed),
+        })
+    });
+}
+
+/// Describes a pending move/copy for the status bar and command-failure messages: the single
+/// path when there's just one (matching the original single-file wording), or a count once
+/// multiple marked entries are involved.
+fn describe_sources(sources: &[PathBuf]) -> String {
+    match sources {
+        [single] => single.display().to_string(),
+        _ => format!("{} items", sources.len()),
+    }
 }
 
 struct Browser {
@@ -41,13 +152,33 @@ struct Browser {
     entries: Vec<FileEntry>,
     selected: usize,
     show_hidden: bool,
-    pending_move: Option<PathBuf>,
+    sort_key: SortKey,
+    pending_action: Option<PendingAction>,
+    marked: HashSet<PathBuf>,
     status: Option<String>,
 }
 
 impl Browser {
     fn selected_entry(&self) -> Option<&FileEntry> {
         self.entries.get(self.selected)
+    }
+
+    /// The paths an `e`/`y` press should act on: every marked entry if any are marked,
+    /// otherwise just the entry under the cursor.
+    fn pending_sources(&self) -> Option<Vec<PathBuf>> {
+        if !self.marked.is_empty() {
+            return Some(self.marked.iter().cloned().collect());
+        }
+        self.selected_entry().map(|entry| vec![self.cwd.join(&entry.name)])
+    }
+
+    fn toggle_mark(&mut self) {
+        if let Some(entry) = self.selected_entry() {
+            let path = self.cwd.join(&entry.name);
+            if !self.marked.remove(&path) {
+                self.marked.insert(path);
+            }
+        }
     }
 
     fn move_selection(&mut self, delta: isize) {
@@ -61,7 +192,7 @@ impl Browser {
     /// Lists `target` before committing to it, so a permission-denied or since-deleted
     /// directory shows an inline error instead of propagating and killing the whole program.
     fn navigate_to(&mut self, target: PathBuf) {
-        match list_entries(&target, self.show_hidden) {
+        match list_entries(&target, self.show_hidden, self.sort_key) {
             Ok(entries) => {
                 self.cwd = target;
                 self.entries = entries;
@@ -88,7 +219,7 @@ impl Browser {
     }
 
     fn refresh(&mut self) {
-        match list_entries(&self.cwd, self.show_hidden) {
+        match list_entries(&self.cwd, self.show_hidden, self.sort_key) {
             Ok(entries) => {
                 self.entries = entries;
                 self.selected = self.selected.min(self.entries.len().saturating_sub(1));
@@ -99,17 +230,26 @@ impl Browser {
     }
 }
 
-fn list_entries(path: &Path, show_hidden: bool) -> io::Result<Vec<FileEntry>> {
+fn list_entries(path: &Path, show_hidden: bool, sort_key: SortKey) -> io::Result<Vec<FileEntry>> {
     let mut entries: Vec<FileEntry> = fs::read_dir(path)?
         .filter_map(|entry| entry.ok())
         .filter(|entry| show_hidden || !entry.file_name().to_string_lossy().starts_with('.'))
-        .map(|entry| FileEntry {
-            name: entry.file_name().to_string_lossy().into_owned(),
-            is_dir: entry.path().is_dir(),
+        .map(|entry| {
+            // Metadata follows symlinks (unlike DirEntry::metadata), matching the old
+            // `entry.path().is_dir()` behavior for symlinked directories. A failed stat (e.g.
+            // a broken symlink) still shows the entry, just with no size/dates to sort by.
+            let metadata = fs::metadata(entry.path()).ok();
+            FileEntry {
+                name: entry.file_name().to_string_lossy().into_owned(),
+                is_dir: metadata.as_ref().is_some_and(fs::Metadata::is_dir),
+                size: metadata.as_ref().map_or(0, fs::Metadata::len),
+                created: metadata.as_ref().and_then(|meta| meta.created().ok()),
+                modified: metadata.as_ref().and_then(|meta| meta.modified().ok()),
+                accessed: metadata.as_ref().and_then(|meta| meta.accessed().ok()),
+            }
         })
         .collect();
-    // directories first, then files, each alphabetical (case-insensitive)
-    entries.sort_by_key(|entry| (!entry.is_dir, entry.name.to_lowercase()));
+    sort_entries(&mut entries, sort_key);
     Ok(entries)
 }
 
@@ -133,24 +273,23 @@ fn file_icon(name: &str) -> &'static str {
         Some("ods" | "fods"| "gnm"| "csv"| "psv"| "tsv"| "xls"| "slxb"| "slxm" | "xlsx") => "📊",
         Some("doc" | "docx" | "rtf" | "pdf" | "odt") => "🗎",
         Some("json") => "{}",
-        Some("html" | "xml") => "</>",
-        Some("js") => "JS",
-        Some("ts") => "TS",
         Some("nix") => "❄️",
         Some("lua") => "◉°",
-        Some("go") => "Go",
-        Some("jsx" | "tsx") => "⚛️",
         Some("py") => "🐍",
         Some("rs") => "🦀",
         Some("php") => "🐘",
         Some("rb") => "♦️",
         Some("java") => "♨️",
         Some("cs") => "#",
-        Some("swift") => "🕊",
+        Some("html" | "xml") => "<>",
+        Some("js" | "ts") => "🌐",
+        Some("swift") => "🪽",
         Some("sql") => "🐿️",
         Some("md" | "markdown") => "📝",
         Some("sqlite" | "sqlite3") => "🪶",
-        Some("zig" | "odin" | "css" | "c" | "h" | "r" | "cpp" | "hpp") => "📜",
+        Some("css" | "qml") => "🖌️",
+        Some("jsx" | "tsx") => "⚛️",
+        Some("zig" | "odin" | "go" |"c" | "h" | "r" | "cpp" | "hpp" | "f90" | "F90" | "f" | "F") => "📜",
         Some("yaml" | "yml" | "toml" | "ini" | "conf" | "config" | "cfg" | "plist") => "🔧",
         Some("iso" | "bin" | "cue" | "img"  | "rom" | "sfc" | "nes" | "gba" | "z64") => "💾",
         Some("db" | ".bak" | "mdf" | "ndf" | "mdb" | "db3" | "dbf" | "odb" | "myc" | "myd" | "myi") => "📀",
@@ -201,8 +340,19 @@ fn draw(frame: &mut Frame, browser: &Browser) {
     let status = if let Some(msg) = &browser.status {
         format!(" {msg} ")
     } else {
-        match &browser.pending_move {
-            Some(source) => format!(" moving: {} (Esc to cancel) ", source.display()),
+        match &browser.pending_action {
+            Some(PendingAction::Move(sources)) => format!(
+                " moving: {} — select a dir, (e) to drop it here (Esc to cancel) ",
+                describe_sources(sources)
+            ),
+            Some(PendingAction::Copy(sources)) => format!(
+                " copying: {} — select a dir, (y) to drop it here (Esc to cancel) ",
+                describe_sources(sources)
+            ),
+            None if !browser.marked.is_empty() => format!(
+                " {} marked — (s) toggle, (e)/(y) move/copy, Esc clears ",
+                browser.marked.len()
+            ),
             None if browser.show_hidden => " all files ".to_string(),
             None => " files hidden ".to_string(),
         }
@@ -218,14 +368,27 @@ fn draw(frame: &mut Frame, browser: &Browser) {
     } else {
         browser.entries.iter()
             .map(|entry| {
+                let full_path = browser.cwd.join(&entry.name);
                 let icon = if entry.is_dir {
                     DIR_ICON
-                } else if is_executable(&browser.cwd.join(&entry.name)) {
+                } else if is_executable(&full_path) {
                     EXE_ELF_ICON
                 } else {
                     file_icon(&entry.name)
                 };
-                ListItem::new(format!("{icon} {}", entry.name))
+                let mark = if browser.marked.contains(&full_path) { " 🟢" } else { "" };
+                let left = format!("{icon} {}{mark}", entry.name);
+
+                let line = match column_value(entry, browser.sort_key) {
+                    Some(value) => {
+                        let value = format!("{value:>width$}", width = column_width(browser.sort_key));
+                        let available = (list_area.width as usize).saturating_sub(SELECTION_GUTTER_WIDTH);
+                        let pad = available.saturating_sub(left.width() + value.width());
+                        format!("{left}{}{value}", " ".repeat(pad))
+                    }
+                    None => left,
+                };
+                ListItem::new(line)
             })
             .collect()
     };
@@ -387,6 +550,57 @@ fn read_cancelable_line(
     result
 }
 
+/// Like `read_cancelable_line` but keys a single option directly instead of typing text
+/// followed by Enter: a letter from the header selects immediately, Esc cancels.
+fn prompt_sort_key(
+    terminal: &mut DefaultTerminal,
+    browser: &Browser,
+    viewport_area: &mut Rect,
+) -> io::Result<Option<SortKey>> {
+    let header = "sort by: (n)ame (s)ize (t)ype (c)reated (m)odified (a)ccessed (Esc to cancel)";
+    execute!(io::stdout(), Show)?;
+
+    let result = loop {
+        terminal.set_cursor_position((0, viewport_area.bottom()))?;
+        execute!(io::stdout(), Clear(ClearType::CurrentLine))?;
+        print!("{header}");
+        io::stdout().flush()?;
+
+        match event::read()? {
+            Event::Key(key_event) => {
+                if key_event.kind != KeyEventKind::Press {
+                    continue;
+                }
+                match key_event.code {
+                    KeyCode::Esc => break Ok(None),
+                    KeyCode::Char(c) => match c.to_ascii_lowercase() {
+                        'n' => break Ok(Some(SortKey::Name)),
+                        's' => break Ok(Some(SortKey::Size)),
+                        't' => break Ok(Some(SortKey::Type)),
+                        'c' => break Ok(Some(SortKey::Created)),
+                        'm' => break Ok(Some(SortKey::Modified)),
+                        'a' => break Ok(Some(SortKey::Accessed)),
+                        _ => {}
+                    },
+                    _ => {}
+                }
+            }
+            Event::Resize(_, _) => {
+                reset_terminal_on_resize(terminal)?;
+                terminal.draw(|frame| {
+                    *viewport_area = frame.area();
+                    draw(frame, browser);
+                })?;
+                execute!(io::stdout(), Show)?;
+            }
+            _ => {}
+        }
+    };
+
+    execute!(io::stdout(), Hide)?;
+    result
+}
+
 fn run_named_command(
     terminal: &mut DefaultTerminal,
     browser: &Browser,
@@ -504,17 +718,45 @@ fn rename_entry(
     Ok(())
 }
 
-fn move_entry(terminal: &mut DefaultTerminal, viewport_area: Rect, source: &Path, dest_dir: &Path) -> io::Result<()> {
+fn move_entry(terminal: &mut DefaultTerminal, viewport_area: Rect, sources: &[PathBuf], dest_dir: &Path) -> io::Result<()> {
     disable_raw_mode()?;
     execute!(io::stdout(), MoveTo(0, viewport_area.bottom()), Show)?;
 
-    let failed = match Command::new("mv").arg(source).arg(dest_dir).status() {
+    let failed = match Command::new("mv").args(sources).arg(dest_dir).status() {
         Ok(status) if !status.success() => {
-            println!("mv failed: {} -> {} ({status})", source.display(), dest_dir.display());
+            println!("mv failed: {} -> {} ({status})", describe_sources(sources), dest_dir.display());
             true
         }
         Err(err) => {
-            println!("mv failed: {} -> {} ({err})", source.display(), dest_dir.display());
+            println!("mv failed: {} -> {} ({err})", describe_sources(sources), dest_dir.display());
+            true
+        }
+        _ => false,
+    };
+
+    if failed {
+        println!("press Enter to return to the list...");
+        let mut pause = String::new();
+        io::stdin().read_line(&mut pause)?;
+    }
+
+    execute!(io::stdout(), Hide)?;
+    enable_raw_mode()?;
+    terminal.clear()?;
+    Ok(())
+}
+
+fn copy_entry(terminal: &mut DefaultTerminal, viewport_area: Rect, sources: &[PathBuf], dest_dir: &Path) -> io::Result<()> {
+    disable_raw_mode()?;
+    execute!(io::stdout(), MoveTo(0, viewport_area.bottom()), Show)?;
+
+    let failed = match Command::new("cp").arg("-r").args(sources).arg(dest_dir).status() {
+        Ok(status) if !status.success() => {
+            println!("cp failed: {} -> {} ({status})", describe_sources(sources), dest_dir.display());
+            true
+        }
+        Err(err) => {
+            println!("cp failed: {} -> {} ({err})", describe_sources(sources), dest_dir.display());
             true
         }
         _ => false,
@@ -652,16 +894,26 @@ fn run(terminal: &mut DefaultTerminal, browser: &mut Browser) -> io::Result<()> 
                 continue;
             }
 
-            match key_event.code {
+            let code = match key_event.code {
+                KeyCode::Char(c) => KeyCode::Char(c.to_ascii_lowercase()),
+                other => other,
+            };
+
+            match code {
                 KeyCode::Char('q') => return Ok(()),
-                KeyCode::Esc if browser.pending_move.take().is_none() => return Ok(()),
+                KeyCode::Esc if browser.pending_action.take().is_none() => {
+                    if browser.marked.is_empty() {
+                        return Ok(());
+                    }
+                    browser.marked.clear();
+                }
                 KeyCode::Esc => {}
                 KeyCode::Up | KeyCode::Char('k') => browser.move_selection(-1),
                 KeyCode::Down | KeyCode::Char('j') => browser.move_selection(1),
                 KeyCode::PageUp | KeyCode::Char('{') => browser.move_selection(-(PAGE_STEP as isize)),
                 KeyCode::PageDown | KeyCode::Char('}') => browser.move_selection(PAGE_STEP as isize),
                 KeyCode::Char('.') => browser.go_up(),
-                KeyCode::Char('a') => browser.toggle_hidden(),
+                KeyCode::Char('a') if key_event.modifiers.contains(KeyModifiers::ALT) => browser.toggle_hidden(),
                 KeyCode::Char('m') => {
                     show_cancelable_prompt(terminal, browser, "mkdir")?;
                     run_named_command(terminal, browser, &mut viewport_area, "mkdir")?;
@@ -699,18 +951,45 @@ fn run(terminal: &mut DefaultTerminal, browser: &mut Browser) -> io::Result<()> 
                         browser.refresh();
                     }
                 }
+                KeyCode::Char('s') if key_event.modifiers.contains(KeyModifiers::ALT) => {
+                    show_cancelable_prompt(terminal, browser, "sort")?;
+                    if let Some(sort_key) = prompt_sort_key(terminal, browser, &mut viewport_area)? {
+                        browser.sort_key = sort_key;
+                    }
+                    terminal.clear()?;
+                    browser.refresh();
+                }
+                KeyCode::Char('s') => browser.toggle_mark(),
                 KeyCode::Char('e') => {
-                    if let Some(source) = browser.pending_move.take() {
-                        match browser.selected_entry() {
+                    match browser.pending_action.take() {
+                        Some(PendingAction::Move(sources)) => match browser.selected_entry() {
                             Some(entry) if entry.is_dir => {
                                 let dest = browser.cwd.join(&entry.name);
-                                move_entry(terminal, viewport_area, &source, &dest)?;
+                                move_entry(terminal, viewport_area, &sources, &dest)?;
+                                browser.marked.clear();
                                 browser.refresh();
                             }
-                            _ => browser.pending_move = Some(source),
+                            _ => browser.pending_action = Some(PendingAction::Move(sources)),
+                        },
+                        other => {
+                            browser.pending_action = browser.pending_sources().map(PendingAction::Move).or(other);
                         }
-                    } else if let Some(entry) = browser.selected_entry() {
-                        browser.pending_move = Some(browser.cwd.join(&entry.name));
+                    }
+                }
+                KeyCode::Char('y') => {
+                    match browser.pending_action.take() {
+                        Some(PendingAction::Copy(sources)) => match browser.selected_entry() {
+                            Some(entry) if entry.is_dir => {
+                                let dest = browser.cwd.join(&entry.name);
+                                copy_entry(terminal, viewport_area, &sources, &dest)?;
+                                browser.marked.clear();
+                                browser.refresh();
+                            }
+                            _ => browser.pending_action = Some(PendingAction::Copy(sources)),
+                        },
+                        other => {
+                            browser.pending_action = browser.pending_sources().map(PendingAction::Copy).or(other);
+                        }
                     }
                 }
                 KeyCode::Char('d') => {
@@ -729,8 +1008,12 @@ fn run(terminal: &mut DefaultTerminal, browser: &mut Browser) -> io::Result<()> 
 fn main() -> io::Result<()> {
     let cwd = env::current_dir()?;
     let show_hidden = false;
-    let entries = list_entries(&cwd, show_hidden)?;
-    let mut browser = Browser { cwd, entries, selected: 0, show_hidden, pending_move: None, status: None };
+    let sort_key = SortKey::Name;
+    let entries = list_entries(&cwd, show_hidden, sort_key)?;
+    let mut browser = Browser {
+        cwd, entries, selected: 0, show_hidden, sort_key,
+        pending_action: None, marked: HashSet::new(), status: None,
+    };
 
     // clear terminal before drawing so the pane starts on a clean screen
     execute!(io::stdout(), Clear(ClearType::All), MoveTo(0, 0))?;
